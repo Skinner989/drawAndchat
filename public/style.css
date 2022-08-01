@@ -1,0 +1,13 @@
+body
+{
+	background-color: #2F3336;
+	color: #ffffff;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 22px;
+}
+
+#rysunek-content
+{
+	background-color: white;
+	min-height: 800px;
+}

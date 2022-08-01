@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="pl">
+
+  <head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+      <title>
+          Notes
+      </title>
+	  <link rel="stylesheet" href="bootstrap.min.css" type="text/css">
+	  <link rel="stylesheet" href="./css/style.css">
+	  <script src="https://kit.fontawesome.com/856f3b27de.js" crossorigin="anonymous"></script>
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+
+  <body>
+	<div class="pl-3 pr-3">
+		<div class="row col-12 mt-2 p-0 mr-0 ml-0">
+			<label for="kolor" class="mr-2">Kolor pędzla:</label>
+			<input class="mt-1" name="kolor" id="kolor" type="color" value="#ff0000">
+			<label for="rozmiar" class="ml-3 mr-1">Rozmiar pędzla:</label>
+			<input name="rozmiar" id="rozmiar" value="10" class="form-control col-1 mr-2 mb-2"></input>
+
+			<div class="chat" id="chat">
+				<div id="chat-img" class="chat-img ml-auto mr-0 p-1"><img src="./img/msg00.png" width="30" height="30"></div>
+				<div class="chat-content text-center" id="chat-content">
+					<span id="ukryjWiadomosci" class="close mr-2 mt-1 text-center">&times;</span>
+					<div id="chatHeader" class="text-center bg-secondary p-1 pl-5 pr-5"></div>
+					<div id="messages"></div>
+					<textarea id="tresc" class="col-11 p-1 mt-5 mb-0" placeholder="Napisz wiadomość..."></textarea>
+					<button type="button" class="btn btn-success ml-auto mr-auto mb-1" onclick="sendMsg();" style="height:30%;">Wyślij</button>
+				</div>
+			</div>
+
+			<div id="nazwaZalogowanegoUzytkownika" class="ml-auto mr-3">Zalogowany jako: </div>
+			<button id="wyloguj" class="btn btn-danger" onclick="logout();">Wyloguj</button>
+		</div>
+		<!-- <div id="dolacz" class="m-0 p-0 col-12 row">
+			<label for="nazwaUzytkownika" class="m-0">Załaduj rysunek innego użytkownika:</label>
+			<input type="text" class="form-control col-4" name="nazwaUzytkownika" id="nazwaUzytkownika" placeholder="Wpisz nazwę użytkownika"></input>
+			<button id="zaladujRysunek" class="btn btn-secondary" onclick="joinOther();">Wczytaj</button>
+		</div> -->
+		<div id="opusc" class="col-12 p-0">
+			<button id="zablokowaniBtn" class="btn btn-secondary" onclick="showBlockedUsers();">Zablokowani użytkownicy</button>
+			<button id="opuscBtn" class="btn btn-danger" onclick="leave(true);">Opuść pokój</button>
+		</div>
+	</div>
+
+	<div id="rysunek" class="col-12 mt-4 mb-5">
+		<div id="rysunek-content" class="p-0 m-0">
+			<canvas id="draw"></canvas>
+		</div>
+	</div>
+	<div>
+		<div class="bg-secondary text-center m-0 p-0 pb-1">Użytkownicy w moim pokoju:</div>
+		<div class="row col-12 p-0 mt-0 mr-0 ml-0" id="roomUsers"></div>
+	</div>
+	<div>
+		<div class="bg-secondary text-center m-0 p-0 pb-1">Inni użytkownicy online:</div>
+		<div class="row col-12 p-0 mt-0 mb-2 mr-0 ml-0" id="onlineUsers"></div>
+	</div>
+
+	<div id="blockedUsers" class="col-12">
+		<div id="blockedUsersContainer" class="col-xl-5 col-md-9 p-0 text-center">
+			<span class="close mr-1 mt-1" onclick="hideBlockedUsers();">&times;</span>
+			<h2 class="mb-4 mt-4">Użytkownicy zablokowani w moim pokoju: </h2>
+			<div id="blockedUsersContent" class="col-11 ml-auto mr-auto"></div>
+			<button class="btn btn-danger mt-4 mb-4" onclick="hideBlockedUsers();">Zamknij</button>
+		</div>
+	</div>
+
+	<div id="removeMessagesConfirmation" class="col-12">
+		<div id="confirmationContainer" class="col-xl-5 col-md-9 p-0 text-center">
+			<h2 class="mb-4 mt-4">Czy napewno chcesz wyszyścić chat?</h2>
+			<button class="btn btn-success mt-4 mb-4" onclick="removeAllMessages();">Zatwierdź</button>
+			<button class="btn btn-danger mt-4 mb-4" onclick="removeMessagesConfirmation();">Anuluj</button>
+		</div>
+	</div>
+
+	<div id="joinRequest" class="col-12">
+		<div id="joinRequestContent" class="col-xl-6 col-md-10 text-center">
+			<h2 id="joinRequestText"></h2>
+			<div id="buttonsContainer" class="col-12 p-0 m-0 mt-3"></div>
+		</div>
+	</div>
+
+	<div class="alert alert-container" id="alert">
+		<div class="alert alert-success alert-content" id="alert_ok">
+			<a href="#" class="close text-center" onclick="hideAlert();">&times;</a>
+			<div id="trescAlertu_Ok"></div>
+		</div>
+		<div class="alert alert-danger alert-content" id="alert_error">
+			<a href="#" class="close" onclick="hideAlert();">&times;</a>
+			<div id="trescAlertu_Error"></div>
+		</div>
+	</div>
+
+	<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+	<script src = "socket.io.min.js" type="text/javascript"></script>
+	<script src="./js/main.js" type="text/javascript"></script>
+  </body>
+  </html>
