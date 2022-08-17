@@ -305,10 +305,10 @@ function sendData() {
   let packet;
 
   if(dane.isMine) {
-    packet = {Dane: dataURL, ID: id};
+    packet = {data: dataURL, ID: id};
   }
   else {
-    packet = {Dane: dataURL, ID: dane.otherId};
+    packet = {data: dataURL, ID: dane.otherId};
   }
   
   $.post("/update", packet, function(data) {
@@ -333,7 +333,7 @@ function sendMsg() {
     else {
       room = dane.otherRoom.split('_')[1];
     }
-    $.post("/sendMessage", {Autor: dane.myName, Room: room, Msg: msg}, function(data) {
+    $.post("/sendMessage", {author: dane.myName, room: room, msg: msg}, function(data) {
       $("#tresc").val('');
       if (data.exit_code === 0) {
         let packet;
@@ -363,7 +363,7 @@ function loadMsgs() {
   else {
     room = dane.otherRoom.split('_')[1];;
   }
-  $.post("/getMessages", {Room: room}, function(data) {
+  $.post("/getMessages", {room: room}, function(data) {
     if(data.exit_code !== 0) {
       let tresc = "Błąd wczytywania wiadomości.\nKod błędu: " + data.exit_code;
       alertERROR(tresc);
@@ -384,13 +384,13 @@ function loadMsgs() {
         let licznik = 0;
         data.packet.forEach(function(dt) {
           if(licznik == 0) {
-            $("#messages").append('<p class="col-11 m-0 p-0 ml-auto mr-auto text-left mt-3">' + dt.Autor + '</p>' + 
-            '<textarea id="komentarz_' + licznik + '" readonly class="pb-2 col-11">' + dt.Tresc + '</textarea>');   
+            $("#messages").append('<p class="col-11 m-0 p-0 ml-auto mr-auto text-left mt-3">' + dt.author + '</p>' + 
+            '<textarea id="komentarz_' + licznik + '" readonly class="pb-2 col-11">' + dt.contents + '</textarea>');   
             licznik ++;
           }
           else {
-            $("#messages").append('<p class="col-11 m-0 p-0 ml-auto mr-auto text-left">' + dt.Autor + '</p>' + 
-            '<textarea id="komentarz_' + licznik + '" readonly class="pb-2 col-11">' + dt.Tresc + '</textarea>');   
+            $("#messages").append('<p class="col-11 m-0 p-0 ml-auto mr-auto text-left">' + dt.author + '</p>' + 
+            '<textarea id="komentarz_' + licznik + '" readonly class="pb-2 col-11">' + dt.contents + '</textarea>');   
             licznik ++;
           }
         });
@@ -413,7 +413,7 @@ function removeMessagesConfirmation() {
 function removeAllMessages() {
   removeMessagesConfirmation();
   room = myRoom.split('_')[1];
-  $.post("/removeMessages", {Room: room, Amount: "All"}, function(data) {
+  $.post("/removeMessages", {room: room, amount: "All"}, function(data) {
     if (data.exit_code === 0) {
       let tresc = "Wyczyszczono chat";
       alertOK(tresc);
@@ -465,8 +465,8 @@ function getData(loadMsgsRequest) {
           loadMsgs();
         }
         var img = new Image;
-        if(data.packet.rysunek != null) {
-          img.src = data.packet.rysunek;
+        if(data.packet.drawing != null) {
+          img.src = data.packet.drawing;
         }
         img.onload = function(){
           ctx.drawImage(img,0,0);
@@ -516,7 +516,7 @@ function checkIfBlocked(name) {
 
 function loadBlockedUsers() {
   $("#blockedUsersContent").html("");
-  $.post("/getBlockedUsers", {Nazwa_Wlasciciela: dane.myName}, function(data) {
+  $.post("/getBlockedUsers", {roomOwnerName: dane.myName}, function(data) {
     if(data.exit_code !== 0) {
       let tresc = "Błąd wczytywania zablokowanych użytkowników.\nKod błędu: " + data.exit_code;
       alertERROR(tresc);
@@ -556,7 +556,7 @@ function checkAndJoin(name, loadMsgsRequest) {
 }
 
 function getOtherData(name, loadMsgsRequest) {
-  $.post("/getOtherImg", {Nazwa: name}, function(data) {
+  $.post("/getOtherImg", {username: name}, function(data) {
     if(data.exit_code === 0) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         var img = new Image;

@@ -25,8 +25,8 @@ function alertERROR(tresc)
 
 function logowanie()
 {
-  const packet = {Nazwa: document.getElementById("nazwa").value, Haslo: document.getElementById("haslo").value};
-  $.post("/logowanie", packet, function(data)
+  const packet = {username: document.getElementById("nazwa").value, password: document.getElementById("haslo").value};
+  $.post("/signin", packet, function(data)
   {
       if(data.exit_code === 0)
       {
