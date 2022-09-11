@@ -1,9 +1,7 @@
-if(window.localStorage.getItem("logged") != 1) {
-  window.location.href = 'index.html';
-}
-
-class Variables {
-   constructor() {
+class Variables 
+{
+   constructor() 
+   {
       this.isMine;
       this.myName;
       this.otherRoom;
@@ -11,188 +9,290 @@ class Variables {
       this.otherName;
       this.numberOfComments;
       this.block;
+      this.noOnlineUsers;
+      this.noRoomUsers;
    }
 }
 
-function hideAlert() {
+// Refresh
+window.sessionStorage.removeItem("otherRoom");
+
+function hideAlert() 
+{
 	$("#alert")[0].style.display = "none";
-	$("#alert_ok")[0].style.display = "none";
-	$("#alert_error")[0].style.display = "none";
+	$("#alertOk")[0].style.display = "none";
+	$("#alertError")[0].style.display = "none";
 }
 
-function alertOK(tresc) {
+function alertOK(contents) 
+{
 	hideAlert();
 	$("#alert").show().delay(5000).fadeOut('slow');
-	$("#alert_ok").show();
-	$("#trescAlertu_Ok").html(tresc);
+	$("#alertOk").show();
+	$("#alertContentOk").html(contents);
 }
 
-function alertERROR(tresc) {
+function alertERROR(contents) 
+{
 	hideAlert();
 	$("#alert").show().delay(5000).fadeOut('slow');
-	$("#alert_error").show();
-	$("#trescAlertu_Error").html(tresc);
+	$("#alertError").show();
+	$("#alertContentError").html(contents);
 }
 
-const dane = new Variables();
-dane.isMine = true;
-dane.block = false;
-
-var canvas = document.getElementById("draw");
-var ctx = canvas.getContext("2d");
-let color = document.getElementById("kolor").value;
-let rozmiar = document.getElementById("rozmiar").value;
-let id = window.localStorage.getItem("id");
+const myData = new Variables();
+myData.isMine = true;
+myData.block = false;
+myData.noOnlineUsers = true;
+myData.noRoomUsers = true;
+const myName = window.sessionStorage.getItem("myName");
+const canvas = document.getElementById("draw");
+const ctx = canvas.getContext("2d");
+const id = window.sessionStorage.getItem("id");
+const socket = io.connect('http://localhost:3000');
+const myRoom = 'room_' + id;
+let color = document.getElementById("drawingColor").value;
+let size = document.getElementById("drawingSize").value;
+let pos = { x: 0, y: 0 };
 let roomUsers = [];
-if(localStorage.getItem("roomUsers") !== null) {
-  roomUsers = JSON.parse(localStorage.getItem("roomUsers"));
+if(sessionStorage.getItem("roomUsers") !== null) 
+{
+  roomUsers = JSON.parse(sessionStorage.getItem("roomUsers"));
 }
 
-function showLeave() {
-  $("#dolacz").hide();
-  $("#opuscBtn").fadeIn('fast');
-}
-
-function showJoin() {
-  $("#opuscBtn").hide();
-  $("#dolacz").fadeIn('fast');
-}
-
-var pos = { x: 0, y: 0 };
-
-function resize() {
-  ctx.canvas.width = document.getElementById("rysunek-content").offsetWidth;
-  ctx.canvas.height = document.getElementById("rysunek-content").offsetHeight;
+function resize() 
+{
+  ctx.canvas.width = document.getElementById("drawingBoxContent").offsetWidth;
+  ctx.canvas.height = document.getElementById("drawingBoxContent").offsetHeight;
   pos = { x: 0, y: 0 };
-  if((dane.isMine) && (localStorage.getItem("otherName") === null)) {
-    getData(false);
-  }
-  else if((!dane.isMine) && (localStorage.getItem("otherName") !== null)) {
-    getOtherData(dane.otherName, false);
-  }
+  // Refresh
+  // if((myData.isMine) && (sessionStorage.getItem("otherName") === null))
+  //==================================================================================
+  // if(myData.isMine)
+  // {
+  //   getData(false);
+  // }
+  // else if((!myData.isMine) && (sessionStorage.getItem("otherName") !== null))
+  // {
+  //   getOtherData(myData.otherName, false);
+  // }
+  getUserData(false);
 }
 
 window.addEventListener("resize", resize);
-document.getElementById("alert").addEventListener("mouseup", hideAlert);
-document.getElementById("rysunek-content").addEventListener("mousemove", draw);
-document.getElementById("rysunek-content").addEventListener("mousedown", setPosition);
-document.getElementById("rysunek-content").addEventListener("mouseenter", setPosition);
-document.getElementById("rysunek-content").addEventListener("mouseup", sendData);
-document.getElementById("kolor").addEventListener("change", colorChange);
-document.getElementById("rozmiar").addEventListener("change", sizeChange);
-document.getElementById("chat-img").addEventListener("click", openChat);
-document.getElementById("ukryjWiadomosci").addEventListener("click", unlockChat);
+window.addEventListener("unload", () =>
+{
+  if(window.sessionStorage.getItem("otherRoom") === null)
+  {
+    let blob = new Blob([JSON.stringify({username: window.sessionStorage.getItem("myName"), room: "none"})], {type : 'application/json; charset=UTF-8'});
+    navigator.sendBeacon("/logout", blob);
+  }
+  else
+  {
+    let blob = new Blob([JSON.stringify({username: window.sessionStorage.getItem("myName"), room: window.sessionStorage.getItem("otherRoom")})], {type : 'application/json; charset=UTF-8'});
+    navigator.sendBeacon("/logout", blob);
+  }
+});
+document.getElementById("joinToUser").addEventListener("click", () =>
+{
+  let userToJoin = $("#username").val();
+  socket.emit('checkIfOnline', myName, userToJoin);
+});
+document.getElementById("drawingBoxContent").addEventListener("mousemove", draw);
+document.getElementById("drawingBoxContent").addEventListener("mousedown", setPosition);
+document.getElementById("drawingBoxContent").addEventListener("mouseenter", setPosition);
+document.getElementById("drawingBoxContent").addEventListener("mouseup", sendData);
 
-function setPosition(e) {
-  pos.x = e.clientX - 15;
-  pos.y = (e.clientY - 115) + document.documentElement.scrollTop;
+function setPosition(e) 
+{
+  if($(document).width() >= 1033)
+  {
+    pos.x = e.clientX - 15;
+    pos.y = (e.clientY - 100) + document.documentElement.scrollTop;
+  }
+  else if($(document).width() < 1033 && $(document).width() >= 756)
+  {
+    pos.x = e.clientX - 15;
+    pos.y = (e.clientY - 140) + document.documentElement.scrollTop;
+  }
+  else if($(document).width() < 756)
+  {
+    pos.x = e.clientX - 15;
+    pos.y = (e.clientY - 179) + document.documentElement.scrollTop;
+  }
 }
 
-function draw(e) {
+function draw(e) 
+{
   if (e.buttons !== 1) return;
 
   ctx.beginPath();
 
-  ctx.lineWidth = document.getElementById("rozmiar").value;
+  ctx.lineWidth = document.getElementById("drawingSize").value;
   ctx.lineCap = "round";
-  ctx.strokeStyle = document.getElementById("kolor").value;
+  ctx.strokeStyle = document.getElementById("drawingColor").value;
 
   ctx.moveTo(pos.x, pos.y);
-  var tempx = pos.x;
-  var tempy = pos.y;
+  let xsPos = pos.x;
+  let ysPos = pos.y;
   setPosition(e);
   ctx.lineTo(pos.x, pos.y);
 
   ctx.stroke();
-  sendmouse(tempx, tempy, pos.x, pos.y);
+  sendDrawing(xsPos, ysPos, pos.x, pos.y);
 }
 
-var socket;
-socket = io.connect('http://localhost:3000');
-const myRoom = 'room_' + id;
-socket.emit('create', myRoom);
-
-function sendmouse(xspos, yspos, xpos, ypos) {
-  var data = {
-    x: xpos,
-    y: ypos,
-    sx: xspos,
-    sy: yspos,
+function sendDrawing(xsPos, ysPos, xPos, yPos) 
+{
+  let data = {
+    x: xPos,
+    y: yPos,
+    sx: xsPos,
+    sy: ysPos,
     color: color,
-    rozmiar: rozmiar,
-    name: dane.myName
+    size: size,
+    name: myName
   };
 
-  if(dane.isMine) {
-    socket.emit('mouse', data, myRoom);
-  }
-  else {
-    socket.emit('mouse', data, dane.otherRoom);
-  }
+  let room;
+  if(myData.isMine) room = myRoom;
+  else  room = myData.otherRoom;
+
+  $.ajax({
+    url: "/sendDrawing",
+    type: 'post',
+    data:{
+      room: room,
+      data: JSON.stringify(data),
+      socketId: window.sessionStorage.getItem("socketId")
+    },
+    error: function(response)
+    {
+      alertERROR("Wystąpił błąd podczas zapisywania zmian rysunku.\nKod błędu: " + response.status);
+    }
+  });
 }
 
-socket.on('mouse', function(data) {
-    if((dane.isMine) || (data.name === dane.otherName)) {
-      ctx.beginPath()
+socket.on('draw', function(responseData) 
+{
+  const data = JSON.parse(responseData);
 
-      ctx.lineWidth = data.rozmiar;
-      ctx.lineCap = "round";
-      ctx.strokeStyle = data.color;
+  if(data.name != myName)
+  {
+    ctx.beginPath()
+    ctx.lineWidth = data.size;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = data.color;
+    ctx.moveTo(data.sx, data.sy);
+    ctx.lineTo(data.x, data.y);
+    ctx.stroke();
+  } 
+});
 
-      ctx.moveTo(data.sx, data.sy);
-      ctx.lineTo(data.x, data.y);
+socket.on('connect', () => 
+{
+  window.sessionStorage.setItem("socketId", socket.id);
+  socket.emit('create', myRoom);
+});
 
-      ctx.stroke();
-    } 
-  }
-);
+socket.on('createRoomResponse', function(room) 
+{
+  checkRoom(room);
+});
 
-socket.on('msg', function(data) {
-    if(dane.numberOfMessages == 0) {
-      $("#messages").html('');
+function checkRoom(room)
+{
+  $.ajax({
+    url: "/checkRoom",
+    type: 'get',
+    data:{
+      room: room,
+    },
+    error: function(response)
+    {
+      if(response.status == 401)
+      {
+        getNewToken(checkRoom, room);
+      }
+      else
+      {
+        alertERROR("Sesja wygasła. Zaloguj się ponownie");
+        window.sessionStorage.setItem("sessionExpired", true);
+        logout();      
+      }
     }
-    $("#messages").append('<p class="col-11 m-0 p-0 ml-auto mr-auto text-left">' + data.Autor + '</p>' + 
-    '<textarea id="komentarz_' + dane.numberOfMessages + '" readonly class="pb-2 col-11">' + data.Msg + '</textarea>');
-    $("#komentarz_" + dane.numberOfMessages)[0].style.height = $("#komentarz_" + dane.numberOfMessages)[0].scrollHeight + "px";					
-    $("#komentarz_" + dane.numberOfMessages)[0].style.overflow = "hidden";
-    $("#komentarz_" + dane.numberOfMessages)[0].style.resize = "none";
-    dane.numberOfMessages++;
-  }
-);
-
-socket.on('onlineUsers', function(onlineUsers) {
-    getOnlineUsers(onlineUsers);
   });
+}
 
-socket.on('joinedToRoom', function(room, name) {
-  if(room === myRoom) {
-    if(!roomUsers.includes(name)) {
-			roomUsers.push(name);
-      localStorage.setItem("roomUsers", JSON.stringify(roomUsers));
-      getRoomUsers();
-		}
+socket.on('newMessage', function(author, msg)
+{
+  if(myData.numberOfMessages == 0) 
+  {
+    $("#messages").html('');
   }
+  $("#messages").append('<p class="col-11 m-0 p-0 ml-auto mr-auto text-left">' + author + '</p>' + 
+  '<textarea id="message_' + myData.numberOfMessages + '" readonly class="pb-2 col-11">' + msg + '</textarea>');
+  $("#message_" + myData.numberOfMessages)[0].style.height = $("#message_" + myData.numberOfMessages)[0].scrollHeight + "px";					
+  $("#message_" + myData.numberOfMessages)[0].style.overflow = "hidden";
+  $("#message_" + myData.numberOfMessages)[0].style.resize = "none";
+  myData.numberOfMessages++;
 });
 
-socket.on('userLeft', function(room, name) {
-  if(room === myRoom) {
-    let index = roomUsers.indexOf(name);
-    if (index > -1) {
-      roomUsers.splice(index, 1);
-      localStorage.setItem("roomUsers", JSON.stringify(roomUsers));
+socket.on('removeMessagesNotification', function() 
+{
+  alertOK("Wyczyszczono chat");
+  $("#messages").html('');
+  $("#messages").append('<p class="col-11 m-0 p-0 ml-auto mr-auto mt-3"> Brak wiadomości </p>');
+  myData.numberOfMessages = 0;
+});
+
+socket.on('onlineUsers', function(onlineUsers) 
+{
+  updateOnlineUsers(onlineUsers);
+});
+
+socket.on('checkIfOnlineResponse', function (name, roomOwnerName, decision)
+{
+  if(name === myName)
+  {
+    if(decision === true)
+    {
+      checkAndJoin(roomOwnerName);
     }
-    getRoomUsers();
+    else
+    {
+      alertERROR("Użytkownik nie jest aktywny");
+    }
   }
 });
 
-socket.on('removeFromRoom', function(name) {
-  if(name === dane.myName) {
-   leave(true);
+socket.on('getOnlineUsersResponse', function(name, onlineUsers)
+{
+  if(name == myName)
+  {
+    updateOnlineUsers(onlineUsers);
   }
 });
 
-socket.on('considerJoinRequest', function(name, roomOwnerName) {
-  if(roomOwnerName == dane.myName) {
+socket.on('addOnlineUser', function(user)
+{
+  if(myName != user)  addOnlineUser(user);
+});
+
+socket.on('removeOnlineUser', function(user, onlineUsers)
+{
+  $("#" + user).remove();
+  if((onlineUsers.length == 1) && (onlineUsers.includes(myName))) 
+  {
+    $("#onlineUsers").append('<div class="noUsers m-0 ml-auto mr-auto p-0 pt-2 pb-2 col-2">Brak</div>');
+    myData.noOnlineUsers = true;
+  }
+});
+
+socket.on('considerJoinRequest', function(name, roomOwnerName) 
+{
+  if(roomOwnerName == myName) 
+  {
     $("#joinRequest")[0].style.display = "block";
     $("#joinRequestText").html('');
     $("#joinRequestText").append('Użytkownik <b>' + name + '</b> chce dołączyć do Twojego pokoju.' + 
@@ -204,423 +304,878 @@ socket.on('considerJoinRequest', function(name, roomOwnerName) {
   }
 });
 
-socket.on('joinRequestResponse', function(roomOwnerName, name, decision) {
-  if(name == dane.myName) {
-    if(decision == true)
+function acceptJoinRequest(name) 
+{
+  $("#joinRequest")[0].style.display = "none";
+  $("#joinRequestText").html('');
+  $("#buttonsContainer").html('');
+
+  $.ajax({
+    url: "/sendJoinRequestResponse",
+    type: 'post',
+    data:{
+      room: myRoom,
+      username: name,
+      decision: true
+    },
+    dataType: 'json',
+    error: function(response)
     {
-      getOtherData(roomOwnerName, true);
-      let tresc = "Użytkownik <b>" + roomOwnerName + "</b> zaakceptował prośbę dołączenia";
-      alertOK(tresc);
+      if(response.status == 401)
+      {
+        getNewToken(acceptJoinRequest, name);
+      }
+      else
+      {
+        alertERROR("Wystąpił błąd podczas akceptowania użytkownika.\nKod błędu: " + response.status);
+      }
     }
-    else {
-      let tresc = "Użytkownik <b>" + roomOwnerName + "</b> odrzucił prośbę dołączenia";
-      alertERROR(tresc);
+  });
+}
+
+function rejectJoinRequest(name) 
+{
+  $("#joinRequest")[0].style.display = "none";
+  $("#joinRequestText").html('');
+  $("#buttonsContainer").html('');
+
+  $.ajax({
+    url: "/sendJoinRequestResponse",
+    type: 'post',
+    data:{
+      room: myRoom,
+      username: name,
+      decision: false
+    },
+    dataType: 'json',
+    error: function(response)
+    {
+      if(response.status == 401)
+      {
+        getNewToken(acceptJoinRequest, name);
+      }
+      else
+      {
+        alertERROR("Wystąpił błąd podczas akceptowania użytkownika.\nKod błędu: " + response.status);
+      }
+    }
+  });
+}
+
+socket.on('joinRequestResponse', function(roomOwnerName, name, decision) 
+{
+  if(name == myName) 
+  {
+    if(decision == 'true' && roomOwnerName == myData.otherName)
+    {
+      myData.otherRoom = 'room_' + myData.otherId;
+      myData.isMine = false;
+      socket.emit('join', myData.otherRoom, myName);
+      getUserData(true);
+      alertOK("Użytkownik <b>" + roomOwnerName + "</b> zaakceptował prośbę dołączenia");
+    }
+    else 
+    {
+      alertERROR("Użytkownik <b>" + roomOwnerName + "</b> odrzucił prośbę dołączenia");
+      myData.otherName = '';
     }
   }
 });
 
-socket.on('removeMessagesNotification', function() {
-  let tresc = "Wyczyszczono chat";
-  alertOK(tresc);
-  $("#messages").html('');
-  $("#messages").append('<p class="col-11 m-0 p-0 ml-auto mr-auto mt-3"> Brak wiadomości </p>');
-  dane.numberOfMessages = 0;
+socket.on('joinedToRoom', function(room, name) 
+{
+  if(room === myRoom) 
+  {
+    if((!roomUsers.includes(name)) && (name != null))
+    {
+			roomUsers.push(name);
+      sessionStorage.setItem("roomUsers", JSON.stringify(roomUsers));
+      if(myData.noRoomUsers === true)
+      {
+        $("#roomUsers").html("");
+        myData.noRoomUsers = false;
+      }
+      let newUser = document.createElement('div');
+      newUser.setAttribute('id', 'U' + name);
+      newUser.classList.add('row', 'roomUser', 'newUser', 'm-0', 'p-0', 'col-lg-2', 'col-md-4', 'pt-2', 'pb-2', 'col-sm-4');
+      let newUsername = document.createElement('div');
+      newUsername.innerHTML = name;
+      newUsername.classList.add('roomUsername', 'm-0', 'p-0', 'col-10');
+      let newUserRemoveButtonContainer = document.createElement('div');
+      newUserRemoveButtonContainer.classList.add('removeButtonContainer', 'm-0', 'p-0', 'col-2');
+      let newUserRemoveButton = document.createElement('img');
+      newUserRemoveButton.classList.add('float-right');
+      newUserRemoveButton.setAttribute('id', 'removeButton_' + name);
+      newUserRemoveButton.setAttribute('onclick', 'removeUser(this.id);');
+      newUserRemoveButton.setAttribute('src', './img/x.png');
+      document.querySelector("#roomUsers").appendChild(newUser);
+      newUser.appendChild(newUsername);
+      newUser.appendChild(newUserRemoveButtonContainer);
+      newUserRemoveButtonContainer.appendChild(newUserRemoveButton);
+		}
+  }
 });
 
-function acceptJoinRequest(name) {
-  socket.emit('sendJoinRequestResponse', dane.myName, name, true);
-  $("#joinRequest")[0].style.display = "none";
-  $("#joinRequestText").html('');
-  $("#buttonsContainer").html('');
-}
+socket.on('userLeft', function(room, name) 
+{
+  if(room === myRoom) 
+  {
+    let index = roomUsers.indexOf(name);
+    if (index > -1) 
+    {
+      roomUsers.splice(index, 1);
+      sessionStorage.setItem("roomUsers", JSON.stringify(roomUsers));
+    }
+    let removedUser = document.querySelector("#U" + name);
+    removedUser.classList.add('roomUserDelete');
+    removedUser.addEventListener('transitionend', function() 
+    {
+      this.remove();
+    });
+    if(roomUsers.length == 0)
+    {
+      setTimeout(() =>
+      {
+        let noUsers = document.createElement('div');
+        noUsers.innerHTML = 'Brak';
+        noUsers.classList.add('noUsers', 'm-0', 'p-0', 'pt-2', 'pb-2', 'ml-auto', 'mr-auto', 'col-2');
+        document.querySelector("#roomUsers").appendChild(noUsers);
+        myData.noRoomUsers = true;
+      }, 500);
+    }
+  }
+});
 
-function rejectJoinRequest(name) {
-  socket.emit('sendJoinRequestResponse', dane.myName, name, false);
-  $("#joinRequest")[0].style.display = "none";
-  $("#joinRequestText").html('');
-  $("#buttonsContainer").html('');
-}
+socket.on('removeFromRoom', function(name, room) 
+{
+  if(name === myName) 
+  {
+    $.ajax({
+      url: "/checkIfRoomMember",
+      type: 'get',
+      data:{
+        room: room.split('_')[1],
+        socketId: window.sessionStorage.getItem("socketId")
+      },
+      success: function()
+      {
+        leave(true);
+      },
+    });
+  }
+});
 
-function getRoomUsers() {
+function getRoomUsers() 
+{
   $("#roomUsers").html("");
-  if(roomUsers.length === 0) {
-    $("#roomUsers").append('<div class="m-0 ml-auto mr-auto p-0 pt-2 pb-2 col-2">Brak</div>');
+  if(roomUsers.length === 0) 
+  {
+    $("#roomUsers").append('<div class="noUsers m-0 ml-auto mr-auto p-0 pt-2 pb-2 col-2">Brak</div>');
   }
-  for(const item of roomUsers) {
-    $("#roomUsers").append('<div class="m-0 p-0 col-2 pt-2 pb-2" id="' + item + '" onclick="removeUser(this.id);">' + item + '<img src="./img/xtlo.png" class="float-right"></div>');
+  for(const item of roomUsers) 
+  {
+    $("#roomUsers").append('<div id="U' + item + '" class="row roomUser m-0 p-0 pt-2 pb-2 col-lg-2 col-md-4 col-sm-4"><div class="roomUsername m-0 p-0 col-10">' + item + '</div><div class="removeButtonContainer m-0 p-0 col-2"><img id="removeButton_' + item + '" src="./img/x.png" onclick="removeUser(this.id);" class="float-right"></div></div>');
   } 
 }
 
-getRoomUsers();
-
-function removeUser(name) {
-  socket.emit('removeUser', name, myRoom);
-  let index = roomUsers.indexOf(name);
-  if (index > -1) {
-    roomUsers.splice(index, 1);
-    localStorage.setItem("roomUsers", JSON.stringify(roomUsers));
-  }
-  getRoomUsers();
-}
-
-function getName() {
-  $.post("/getName", {ID: id}, function(data) {
-    if(data.exit_code === 0) {
-      dane.myName = data.name;
-      socket.emit('add', dane.myName);
-      $("#nazwaZalogowanegoUzytkownika").append(dane.myName);
-      loadBlockedUsers();
+function removeUser(user) 
+{
+  const name = user.split('_')[1];
+  $.ajax({
+    url: "/removeUserFromRoom",
+    type: 'delete',
+    data:{
+      username: name
+    },
+    dataType: 'json',
+    success: function()
+    {
+      const index = roomUsers.indexOf(name);
+      if (index > -1) 
+      {
+        roomUsers.splice(index, 1);
+        sessionStorage.setItem("roomUsers", JSON.stringify(roomUsers));
+      }
+    },
+    error: function(response)
+    {
+      if(response.status == 401)
+      {
+        getNewToken(removeUser, name);
+      }
+      else
+      {
+        alertERROR("Wystąpił błąd podczas próby załadowania profilu użytkownika.\nKod błędu: " + response.status);
+      }
     }
   });
 }
 
-getName();
+function getName() 
+{
+  $.ajax({
+    url: "/getName",
+    type: 'get',
+    dataType: 'json',
+    success: function(data)
+    {
+      myName = data.username;
+      window.sessionStorage.setItem("myName", data.username);
+      socket.emit('add', myName);
+      socket.emit('getOnlineUsers', myName, myRoom);
+      $("#loggedUser").append(myName);
+      loadBlockedUsers();
+    },
+    error: function(response)
+    {
+      if(response.status == 401)
+      {
+        getNewToken(getName);
+      }
+      else
+      {
+        alertERROR("Wystąpił błąd podczas próby załadowania profilu użytkownika.\nKod błędu: " + response.status);
+      }
+    }
+  });
+}
 
-function getOnlineUsers(onlineUsers) {
+function updateOnlineUsers(onlineUsers) 
+{
   $("#onlineUsers").html("");
-  if((onlineUsers.length == 1) && (onlineUsers.includes(dane.myName))) {
-    $("#onlineUsers").append('<div class="m-0 ml-auto mr-auto p-0 pt-2 pb-2 col-2">Brak</div>');
+  if((onlineUsers.length == 1) && (onlineUsers.includes(myName))) 
+  {
+    $("#onlineUsers").append('<div class="noUsers m-0 ml-auto mr-auto p-0 pt-2 pb-2 col-2">Brak</div>');
+    myData.noOnlineUsers = true;
   }
-  else {
-    for(const item of onlineUsers) {
-      if(dane.myName != item){
-        $("#onlineUsers").append('<div class="user m-0 p-0 pt-2 pb-2 col-2" id="' + item + '" onclick="checkAndJoin(this.id, true);">' + item + '</div>');  
+  else 
+  {
+    myData.noOnlineUsers = false;
+    for(const item of onlineUsers) 
+    {
+      if(myName != item)
+      {
+        $("#onlineUsers").append('<div class="user m-0 p-0 pt-2 pb-2 col-lg-2 col-md-4 col-sm-4" id="' + item + '" onclick="checkAndJoin(this.id, true);">' + item + '</div>');  
       }
     }
   }
 }
 
-function colorChange() {
+function addOnlineUser(user)
+{
+  if(myData.noOnlineUsers)
+  {
+    $("#onlineUsers").html("");
+    myData.noOnlineUsers = false;
+  }
+  let newUser = document.createElement('div');
+	newUser.innerHTML = user;
+	newUser.classList.add('newUser', 'user', 'm-0', 'p-0', 'pt-2', 'pb-2', 'col-lg-2', 'col-md-4', 'col-sm-4');
+  newUser.setAttribute('id', user)
+  newUser.setAttribute('onclick', 'checkAndJoin(this.id, true);');
+	document.querySelector("#onlineUsers").appendChild(newUser);
+}
+
+function colorChange() 
+{
   color = $("#drawingColor").val();
 };
 
-function sizeChange() {
-  rozmiar = $("#rozmiar").val();
+function sizeChange() 
+{
+  size = $("#drawingSize").val();
 };
 
-function sendData() {
-  WIDTH = document.getElementById("rysunek-content").offsetWidth;
-  HEIGHT = document.getElementById("rysunek-content").offsetHeight;
-  var dataURL = document.getElementById("draw").toDataURL();
-  let packet;
+function sendData() 
+{
+  WIDTH = document.getElementById("drawingBoxContent").offsetWidth;
+  HEIGHT = document.getElementById("drawingBoxContent").offsetHeight;
+  const dataURL = document.getElementById("draw").toDataURL();
+  let ID;
 
-  if(dane.isMine) {
-    packet = {data: dataURL, ID: id};
+  if(myData.isMine)
+  {
+    ID = id;
   }
-  else {
-    packet = {data: dataURL, ID: dane.otherId};
+  else 
+  {
+    ID = myData.otherId;
   }
-  
-  $.post("/update", packet, function(data) {
-      if(data.exit_code !== 0) {
-        let tresc = "Błąd połączenia.\nKod błędu: " + data.exit_code;
-        alertERROR(tresc);
+
+  $.ajax({
+    url: "/update",
+    type: 'post',
+    data:{
+      room: ID,
+      data: dataURL,
+      socketId: window.sessionStorage.getItem("socketId")
+    },
+    error: function(response)
+    {
+      if(response.status == 403)
+      {
+        alertERROR("Brak uprawnień. Uzytkownik nie jest członkiem pokoju");
       }
+      else if(response.status == 401)
+      {
+        getNewToken(sendData);
+      }
+      else
+      {
+        alertERROR("Błąd synchronizacji z użytkownikami pokoju.\nKod błędu: " + response.status);
+      }
+    }
   });
 }
 
-function sendMsg() {
-  let msg = $("#tresc").val();
-  if((msg == "") || (msg == " ")) {
-    let tresc = "Wpisz treść wiadomości";
-    alertERROR(tresc);
+function sendMsg() 
+{
+  let msg = $("#contents").val();
+  if((msg == "") || (msg == " ")) 
+  {
+    alertERROR("Wpisz treść wiadomości");
   }
-  else {
+  else 
+  {
     let room;
-    if(dane.isMine) {
+    if(myData.isMine) 
+    {
       room = myRoom.split('_')[1];
     }
-    else {
-      room = dane.otherRoom.split('_')[1];
+    else 
+    {
+      room = myData.otherRoom.split('_')[1];
     }
-    $.post("/sendMessage", {author: dane.myName, room: room, msg: msg}, function(data) {
-      $("#tresc").val('');
-      if (data.exit_code === 0) {
-        let packet;
-        if(dane.isMine) {
-          packet = {Room: myRoom, Autor: dane.myName, Msg: msg}
-          socket.emit('msg', packet);
+    $.ajax({
+      url: "/sendMessage",
+      type: 'post',
+      data:{
+        room: room,
+        msg: msg,
+        socketId: window.sessionStorage.getItem("socketId")
+      },
+      success: function ()
+      {
+        $("#contents").val('');
+      },
+      error: function(response)
+      {
+        if(response.status == 403)
+        {
+          alertERROR("Brak uprawnień. Uzytkownik nie jest członkiem pokoju");
         }
-        else {
-          packet = {Room: dane.otherRoom, Autor: dane.myName, Msg: msg}
-          socket.emit('msg', packet);
+        else if(response.status == 401)
+        {
+          getNewToken(sendMsg);
+        }
+        else
+        {
+          alertERROR("Błąd wysyłania wiadomości.\nKod błędu: " + response.status);
         }
       }
-      else if (data.exit_code !== 0) {
-        let tresc = "Błąd wysyłania wiadomości.\nKod błędu: " + data.exit_code;
-        alertERROR(tresc);
-      }     
     });
   }
 }
 
-function loadMsgs() {
+function loadMsgs() 
+{
   $("#messages").html("");
   let room;
-  if(dane.isMine) {
+  if(myData.isMine) 
+  {
     room = myRoom.split('_')[1];;
   }
-  else {
-    room = dane.otherRoom.split('_')[1];;
+  else 
+  {
+    room = myData.otherRoom.split('_')[1];;
   }
-  $.post("/getMessages", {room: room}, function(data) {
-    if(data.exit_code !== 0) {
-      let tresc = "Błąd wczytywania wiadomości.\nKod błędu: " + data.exit_code;
-      alertERROR(tresc);
-    }
-    else{
+  $.ajax({
+    url: "/getMessages",
+    type: 'get',
+    data:{
+      room: room,
+      socketId: window.sessionStorage.getItem("socketId")
+    },
+    dataType: 'json',
+    success: function(data)
+    {
       $("#chatHeader").html('');
-      if(dane.isMine) {
+      if(myData.isMine) 
+      {
         $("#chatHeader").append(' Chat <button type="button" class="btn btn-danger ml-2" onclick="removeMessagesConfirmation();" style="height:30%;">Wyczyść</button>');
       }
-      else {
+      else 
+      {
         $("#chatHeader").append(' Chat ');
       }
-      if(data.packet.length == 0) {
+      if(data.length == 0) 
+      {
         $("#messages").append('<p class="col-11 m-0 p-0 ml-auto mr-auto mt-3"> Brak wiadomości </p>');
-        dane.numberOfMessages = 0;
+        myData.numberOfMessages = 0;
       }
-      else {
-        let licznik = 0;
-        data.packet.forEach(function(dt) {
-          if(licznik == 0) {
+      else 
+      {
+        let counter = 0;
+        data.forEach(function(dt) 
+        {
+          if(counter == 0) 
+          {
             $("#messages").append('<p class="col-11 m-0 p-0 ml-auto mr-auto text-left mt-3">' + dt.author + '</p>' + 
-            '<textarea id="komentarz_' + licznik + '" readonly class="pb-2 col-11">' + dt.contents + '</textarea>');   
-            licznik ++;
+            '<textarea id="message_' + counter + '" readonly class="pb-2 col-11">' + dt.contents + '</textarea>');   
+            counter ++;
           }
-          else {
+          else 
+          {
             $("#messages").append('<p class="col-11 m-0 p-0 ml-auto mr-auto text-left">' + dt.author + '</p>' + 
-            '<textarea id="komentarz_' + licznik + '" readonly class="pb-2 col-11">' + dt.contents + '</textarea>');   
-            licznik ++;
+            '<textarea id="message_' + counter + '" readonly class="pb-2 col-11">' + dt.contents + '</textarea>');   
+            counter ++;
           }
         });
+        myData.numberOfMessages = counter;
         resizeMsgs();
-        dane.numberOfMessages = licznik;
       } 
+    },
+    error: function(response)
+    {
+      if(response.status == 403)
+      {
+        alertERROR("Brak uprawnień. Uzytkownik nie jest członkiem pokoju");
+      }
+      else if(response.status == 401)
+      {
+        getNewToken(loadMsgs);
+      }
+      else
+      {
+        alertERROR("Błąd ładowania wiadomości.\nKod błędu: " + response.status);
+      }
     }
   });
 }
 
-function removeMessagesConfirmation() {
-  if($("#removeMessagesConfirmation")[0].style.display == "block") {
+function getNewToken(functionToExecute, functionArgument)
+{
+  $.ajax({
+    url: "/token",
+    type: 'post',
+    success: function()
+    {
+      if(functionArgument == null)
+      {
+        functionToExecute();
+      }
+      else
+      {
+        functionToExecute(functionArgument);
+      }
+    },
+    error: function()
+    {
+      alertERROR("Sesja wygasła. Zaloguj się ponownie");
+      window.sessionStorage.setItem("sessionExpired", true);
+      logout();
+    }
+  });
+}
+
+function checkRefreshToken()
+{
+  $.ajax({
+    url: "/checkRefreshToken",
+    type: 'post',
+    data:{
+      token: window.sessionStorage.getItem("refreshToken")
+    },
+    dataType: 'json',
+    error: function()
+    {
+      alertERROR("Sesja wygasła. Zaloguj się ponownie");
+      window.sessionStorage.setItem("sessionExpired", true);
+      logout();
+    }
+  });
+}
+
+function removeMessagesConfirmation() 
+{
+  if($("#removeMessagesConfirmation")[0].style.display == "block") 
+  {
     $("#removeMessagesConfirmation")[0].style.display = "none";
   }
-  else {
+  else 
+  {
     $("#removeMessagesConfirmation")[0].style.display = "block";
   }
 }
 
-function removeAllMessages() {
+function removeAllMessages() 
+{
   removeMessagesConfirmation();
-  room = myRoom.split('_')[1];
-  $.post("/removeMessages", {room: room, amount: "All"}, function(data) {
-    if (data.exit_code === 0) {
-      let tresc = "Wyczyszczono chat";
-      alertOK(tresc);
-      $("#messages").html('');
-      $("#messages").append('<p class="col-11 m-0 p-0 ml-auto mr-auto mt-3"> Brak wiadomości </p>');
-      dane.numberOfMessages = 0;
-      socket.emit('removeMessages', myRoom);
-    }
-    else if (data.exit_code !== 0) {
-      let tresc = "Błąd usuwania wiadomości.\nKod błędu: " + data.exit_code;
-      alertERROR(tresc);
+  $.ajax({
+    url: "/removeMessages",
+    type: 'delete',
+    data:{
+      amount: "All"
+    },
+    error: function(response)
+    {
+      if(response.status == 401)
+      {
+        getNewToken(removeAllMessages);
+      }
+      else
+      {
+        alertERROR("Błąd usuwania wiadomości.\nKod błędu: " + response.status);
+      }
     }
   });     
 }
 
-function openChat() {
-  if(!dane.block) {
-    $("#chat-content")[0].style.display = "block";
-    if(dane.numberOfMessages != 0) {
+function openChat() 
+{
+  if(!myData.block) 
+  {
+    $("#chatContent")[0].style.display = "block";
+    if(myData.numberOfMessages != 0) 
+    {
       resizeMsgs();
     }
-    dane.block = true;
+    myData.block = true;
   }
-  else{
-    $("#chat-content")[0].style.display = "none";
+  else
+  {
+    $("#chatContent")[0].style.display = "none";
     unlockChat();
   }
 }
 
-function resizeMsgs() {
-  if($("#chat-content")[0].style.display == "block") {
-    for(let i = 0; i < dane.numberOfMessages; i++) {
-      $("#komentarz_" + i)[0].style.height = $("#komentarz_" + i)[0].scrollHeight + "px";					
-      $("#komentarz_" + i)[0].style.overflow = "hidden";
-      $("#komentarz_" + i)[0].style.resize = "none";
+function resizeMsgs() 
+{
+  if($("#chatContent")[0].style.display == "block") 
+  {
+    for(let i = 0; i < myData.numberOfMessages; i++) 
+    {
+      $("#message_" + i)[0].style.height = $("#message_" + i)[0].scrollHeight + "px";					
+      $("#message_" + i)[0].style.overflow = "hidden";
+      $("#message_" + i)[0].style.resize = "none";
     }
   }
 }
 
-function unlockChat() {
-  dane.block = false;
-  $("#chat-content")[0].style.display = "none";
+function unlockChat() 
+{
+  myData.block = false;
+  $("#chatContent")[0].style.display = "none";
 }
 
-function getData(loadMsgsRequest) {
-  $.post("/getImg", {ID: id}, function(data) {
-      if(data.exit_code === 0) {
-        if(loadMsgsRequest === true) {
-          loadMsgs();
-        }
-        var img = new Image;
-        if(data.packet.drawing != null) {
-          img.src = data.packet.drawing;
-        }
-        img.onload = function(){
-          ctx.drawImage(img,0,0);
-        };
-      }
-  });
-}
-
-function blockUser(name) {
-  $.post("/blockUser", {Nazwa_Wlasciciela: dane.myName, Nazwa: name}, function(data) {
-    if(data.exit_code === 0) {
-      socket.emit('sendJoinRequestResponse', dane.myName, name, false);
+function blockUser(name) 
+{
+  $.ajax({
+    url: "/blockUser",
+    type: 'post',
+    data:{
+      username: name
+    },
+    success: function ()
+    {
+      socket.emit('sendJoinRequestResponse',  myName, myRoom, name, false);
       $("#joinRequest")[0].style.display = "none";
       $("#joinRequestText").html('');
       $("#buttonsContainer").html('');
       alertOK("Zablokowano użytkownika <b>" + name + "</b>");
-      loadBlockedUsers();     
-    }
-    else if(data.exit_code === 2) {
-      alertERROR("Wystąpił błąd podczas próby zablokowania użytkownika");
+      loadBlockedUsers();
+    },
+    error: function(response)
+    {
+      if(response.status == 401)
+      {
+        getNewToken(blockUser, name);
+      }
+      else
+      {
+        alertERROR("Wystąpił błąd podczas próby zablokowania użytkownika.\nKod błędu: " + response.status);
+      }
     }
   });
 }
 
-function unblockUser(name) {
-  $.post("/unblockUser", {Nazwa_Wlasciciela: dane.myName, Nazwa: name}, function(data) {
-    if(data.exit_code === 0) {   
+function unblockUser(name) 
+{
+  $.ajax({
+    url: "/unblockUser",
+    type: 'post',
+    data:{
+      username: name
+    },
+    success: function ()
+    {
       alertOK("Odblokowano użytkownika <b>" + name + "</b>");
-      loadBlockedUsers();   
-    }
-    else if(data.exit_code === 2) {
-      alertERROR("Wystąpił błąd podczas próby odblokowania użytkownika");
-    }
-  });
-}
-
-function checkIfBlocked(name) {
-  $.post("/checkUser", {Nazwa_Wlasciciela: name, Nazwa: dane.myName}, function(data) {
-    if(data.exit_code === 0) {
-      alertERROR("Właściciel pokoju zablokował Ci możliwość dołączania");
-    }
-    else if(data.exit_code === 2) {
-      sendJoinRequest(name);
+      loadBlockedUsers(); 
+    },
+    error: function(response)
+    {
+      if(response.status == 401)
+      {
+        getNewToken(unblockUser, name);
+      }
+      else
+      {
+        alertERROR("Wystąpił błąd podczas próby odblokowania użytkownika.\nKod błędu: " + response.status);
+      }
     }
   });
 }
 
-function loadBlockedUsers() {
+function loadBlockedUsers() 
+{
   $("#blockedUsersContent").html("");
-  $.post("/getBlockedUsers", {roomOwnerName: dane.myName}, function(data) {
-    if(data.exit_code !== 0) {
-      let tresc = "Błąd wczytywania zablokowanych użytkowników.\nKod błędu: " + data.exit_code;
-      alertERROR(tresc);
-    }
-    else{
-      data.packet.forEach(function(dt) {
-        $("#blockedUsersContent").append('<div class="col-12 mb-1 text-left bg-secondary text-white pr-0 border-left">' + dt.Nazwa_Uzytkownika
-        + '<button id="' + dt.Nazwa_Uzytkownika + '" class="btn btn-success rounded-0" onclick="unblockUser(this.id);">Odblokuj</button></div>');
-      });
+  $.ajax({
+    url: "/getBlockedUsers",
+    type: 'get',
+    dataType: 'json',
+    success: function (data)
+    {
+      if(data.length == 0) 
+      {
+        $("#blockedUsersContent").append('<div class="col-12 mb-1 bg-secondary text-white border-left border-right">Brak zablokowanych użytkowników</div>');
+      }
+      else 
+      {
+        data.forEach(function(dt) 
+        {
+          $("#blockedUsersContent").append('<div class="col-12 mb-1 text-left bg-secondary text-white pr-0 border-left">' + dt.username
+          + '<button id="' + dt.username + '" class="btn btn-success rounded-0" onclick="unblockUser(this.id);">Odblokuj</button></div>');
+        });
+      }
+    },
+    error: function(response)
+    {
+      if(response.status == 401)
+      {
+        getNewToken(loadBlockedUsers);
+      }
+      else
+      {
+        alertERROR("Błąd wczytywania zablokowanych użytkowników.\nKod błędu: " + response.status);
+      }
     }
   });
 }
 
-function showBlockedUsers() {
-  $("#blockedUsers")[0].style.display = "block";
+function showBlockedUsers() 
+{
+  $("#blockedUsers").fadeIn('fast');
 }
 
-function hideBlockedUsers() {
+function hideBlockedUsers() 
+{
   $("#blockedUsers")[0].style.display = "none";
 }
 
-function sendJoinRequest(name) {
-  $.post("/getOtherImg", {Nazwa: name}, function(data) {
-    if(data.exit_code === 0) {
-      socket.emit('joinRequest', dane.myName, name, 'room_' + data.packet.id);
-      let tresc = "Wysłano prośbę dołączania";
-      alertOK(tresc);
+function checkAndJoin(name) 
+{
+  if(!myData.isMine) 
+  {
+    leave(false);
+  }
+  sendJoinRequest(name);
+}
+
+function sendJoinRequest(name) 
+{
+  $.ajax({
+    url: "/joinToRoom",
+    type: 'get',
+    data:{
+      roomOwnerName: name,
+    },
+    dataType: 'json',
+    success: function (data)
+    {
+      if(data.isBlocked)
+      {
+        alertERROR("Właściciel pokoju zablokował Ci możliwość dołączania"); 
+      }
+      else
+      {
+        myData.otherName = name;
+        myData.otherId = data.id[0].id;
+        socket.emit('joinRequest', myName, name, 'room_' + data.id[0].id);
+        alertOK("Wysłano prośbę dołączania");
+      }
+    },
+    error: function(response)
+    {
+      if(response.status == 401)
+      {
+        getNewToken(checkIfBlocked, name);
+      }
+      else
+      {
+        alertERROR("Wystąpił błąd podczas dołączania do pokoju.\nKod błędu: " + response.status);
+      }
     }
   });
 }
 
-function checkAndJoin(name, loadMsgsRequest) {
-  if(!dane.isMine) {
-    leave(false);
+function getUserData(loadMsgsRequest) 
+{
+  let name;
+  let room;
+  if(myData.isMine)
+  {
+    name = myName;
+    room = id;
   }
-  checkIfBlocked(name);
-}
-
-function getOtherData(name, loadMsgsRequest) {
-  $.post("/getOtherImg", {username: name}, function(data) {
-    if(data.exit_code === 0) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        var img = new Image;
-        if(data.packet.rysunek != null) {
-          img.src = data.packet.rysunek;
-        }
-        img.onload = function(){
-          ctx.drawImage(img,0,0);
-        };
-        dane.isMine = false;
-        dane.otherRoom = 'room_' + data.packet.id;
-        dane.otherId = data.packet.id;
-        dane.otherName = name;
-        window.localStorage.setItem("otherName", name);
-        socket.emit('join', dane.otherRoom, dane.myName);
-        showLeave();
-        if(loadMsgsRequest === true)
-        {
-          loadMsgs();
-        }
+  else
+  {
+    name = myData.otherName;
+    room = myData.otherId;
+  }
+  $.ajax({
+    url: "/getUserImg",
+    type: 'get',
+    data:{
+      username: name,
+      room: room,
+      socketId: window.sessionStorage.getItem("socketId")
+    },
+    dataType: 'json',
+    success: function(data)
+    {
+      if(loadMsgsRequest === true) 
+      {
+        loadMsgs();
       }
-      else if(data.exit_code === 1) {
-        let tresc = "Nie podano nazwy użytkownika";
-        alertERROR(tresc);
+      $("#drawingBoxContent")[0].style.display = "none";
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const img = new Image;
+      $("#drawingBoxContent").fadeIn(1000);
+      if(data.drawing != null) 
+      {
+        img.src = data.drawing;
       }
-      else if(data.exit_code === 2) {
-        let tresc = "Podany użytkownik nie istnieje";
-        alertERROR(tresc);
+      img.onload = function()
+      {
+        ctx.drawImage(img,0,0);
+      };
+      if(!myData.isMine)
+      {
+        myData.isMine = false;
+        window.sessionStorage.setItem("otherRoom", myData.otherRoom);
+        window.sessionStorage.setItem("otherName", name);
+        $("#leaveBtn").fadeIn('fast');
       }
-      else {
-        let tresc = "Wystąpił problem z dołączeniem do użśytkownika.\nKod błędu: " + data.exit_code;
-        alertERROR(tresc);
+    },
+    error: function(response)
+    {
+      if(response.status == 401)
+      {
+        getNewToken(getUserData, loadMsgsRequest);
       }
+      else
+      {
+        alertERROR("Wystąpił błąd podczas próby załadowania obrazka.\nKod błędu: " + response.status);
+      }
+    }
   });
 }
 
-function leave(loadRequest) {
-  window.localStorage.removeItem("otherName");
-  socket.emit('leave', dane.otherRoom, dane.myName);
-  if(loadRequest) {
-    dane.isMine = true;
-    showJoin();
+function leave(loadRequest) 
+{
+  window.sessionStorage.removeItem("otherName");
+  window.sessionStorage.removeItem("otherRoom");
+  socket.emit('leave', myData.otherRoom, window.sessionStorage.getItem("myName"));
+  if(loadRequest) 
+  {
+    myData.isMine = true;
+    $("#leaveBtn").hide();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    getData(true);
+    getUserData(true);
   }
 }
 
-function logout(){
-  if(!dane.isMine) {
-    leave(false);
-  }
-  socket.emit('remove', dane.myName);
-  window.localStorage.setItem("logged", 0);
-  $("#nazwaUzytkownika").val('');
-  window.location.href = 'main.html';
+function clearCookie() 
+{
+  $.ajax({
+    url: "/clearCookie",
+    type: 'delete'
+  });
 }
 
-function start() {
-  if(localStorage.getItem("otherName") !== null) {
-    getOtherData(localStorage.getItem("otherName"), true);
+function logout()
+{
+  if(window.sessionStorage.getItem("otherRoom") === null)
+  {
+    let blob = new Blob([JSON.stringify({username: window.sessionStorage.getItem("myName"), room: "none"})], {type : 'application/json; charset=UTF-8'});
+    navigator.sendBeacon("/logout", blob);
   }
-  else{
-    getData(true);
+  else
+  {
+    let blob = new Blob([JSON.stringify({username: window.sessionStorage.getItem("myName"), room: window.sessionStorage.getItem("otherRoom")})], {type : 'application/json; charset=UTF-8'});
+    navigator.sendBeacon("/logout", blob);
   }
-  resize();
+  clearCookie();
+  if(window.sessionStorage.getItem("sessionExpired"))
+  {
+    window.sessionStorage.clear();
+    window.sessionStorage.setItem("sessionExpired", true);
+    window.location.href = 'start.html';
+  }
+  else
+  {
+    window.sessionStorage.clear();
+    window.location.href = 'start.html';
+  }
+}
+
+function addMeToOnlineUsers()
+{
+  $.ajax({
+    url: "/addMeToOnlineUsers",
+    type: 'post',
+    error: function(response)
+    {
+      if(response.status == 401)
+      {
+        getNewToken(addMeToOnlineUsers);
+      }
+      else
+      {
+        alertERROR("Wystąpił błąd podczas dodawania użytkownika do listy aktywnych użytkowników" + response.status);
+      }
+    }
+  });
+}
+
+function start() 
+{
+  checkRefreshToken();
+  addMeToOnlineUsers();
+  socket.emit('getOnlineUsers', myName);
+  $("#loggedUser").append(myName);
+  getRoomUsers();
 }
 start();
+
+$(document).ready(function() 
+{
+	setTimeout(function()
+  {
+    $('#pageContent')[0].style.display = "none";
+    $('#pageContent').fadeIn(1000);
+    loadBlockedUsers();
+    loadMsgs();
+    resize();
+		$('body').addClass('loaded');
+    // Refresh
+    // if(sessionStorage.getItem("otherName") !== null) 
+    // {
+    //   getOtherData(sessionStorage.getItem("otherName"), true);
+    // }
+    // else
+    // {
+    //   getData(true);
+    // }
+	}, 1000);
+});

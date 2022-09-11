@@ -1,52 +1,74 @@
-window.localStorage.setItem("logged", 0);
+window.sessionStorage.setItem("logged", 0);
 
-function hideAlert()
+function hideAlert() 
 {
 	$("#alert")[0].style.display = "none";
-	$("#alert_ok")[0].style.display = "none";
-	$("#alert_error")[0].style.display = "none";
+	$("#alertOk")[0].style.display = "none";
+	$("#alertError")[0].style.display = "none";
 }
 
-function alertOK(tresc)
+function alertOK(contents) 
 {
 	hideAlert();
 	$("#alert").show().delay(5000).fadeOut('slow');
-	$("#alert_ok").show();
-	$("#trescAlertu_Ok").html(tresc);
+	$("#alertOk").show();
+	$("#alertContentOk").html(contents);
 }
 
-function alertERROR(tresc)
+function alertERROR(contents) 
 {
 	hideAlert();
 	$("#alert").show().delay(5000).fadeOut('slow');
-	$("#alert_error").show();
-	$("#trescAlertu_Error").html(tresc);
+	$("#alertError").show();
+	$("#alertContentError").html(contents);
 }
 
-function logowanie()
+function showLogin()
 {
-  const packet = {username: document.getElementById("nazwa").value, password: document.getElementById("haslo").value};
-  $.post("/signin", packet, function(data)
-  {
-      if(data.exit_code === 0)
-      {
-        window.localStorage.setItem("id", data.packet.userID);
-        window.localStorage.setItem("logged", 1);
-        $("#nazwa").val('');
-        $("#haslo").val('');
-        window.location.href = 'main.html';
-      }
-      else if((data.exit_code === 1) || (data.exit_code === 2) || (data.exit_code === 3))
-      {
-        let tresc = "Podane dane są nieprawidłowe";
-        alertERROR(tresc);
-        $("#nazwa").val('');
-        $("#haslo").val('');
-      }
-      else
-      {
-        let tresc = "Błąd logowania";
-        alertERROR(tresc);
-      }
+  $("#signupPage").hide();
+  $("#loginPage").fadeIn(1000);
+}
+
+function showSignup()
+{
+  $("#loginPage").hide();
+  $("#signupPage").fadeIn(1000);
+  alertERROR("Błąd logowania");
+}
+
+function login() 
+{
+  $.ajax({
+    url: "/signin",
+    type: 'post',
+    data:{
+      username: $("#username").val(), 
+      password: $("#password").val()
+    },
+    dataType: 'json',
+    success: function(data)
+    {
+      window.sessionStorage.setItem("myName", data.username);
+      window.sessionStorage.setItem("id", data.userID);
+      window.sessionStorage.setItem("refreshToken", data.refreshToken);
+      $("#username").val('');
+      $("#password").val('');
+      window.location.href = 'main.html';
+    },
+    error: function(response) 
+    {
+      console.clear();
+      $("#username").val('');
+      $("#password").val('');
+      alertERROR(response.responseText);
+    }
   });
 }
+
+$(document).ready(function() 
+{
+	setTimeout(function()
+  {
+    $('#pageContent').fadeIn(1000);
+	});
+});
