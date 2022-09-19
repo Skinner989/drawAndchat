@@ -111,15 +111,6 @@ body
 	text-align: center;
 }
 
-#roomUsers img:hover
-{
-	cursor: pointer;
-	height: 39.5px;
-	width: 39.5px;
-	border-style: solid;
-	border-color:green;
-}
-
 #onlineUsers .user:hover
 {
 	background-image: linear-gradient(rgb(60, 255, 0), rgb(8, 143, 42));
@@ -161,6 +152,15 @@ body
 {
 	cursor: pointer;	
 	background: rgb(250, 0, 0);
+}
+
+.center 
+{
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	-ms-transform: translate(-50%, -50%);
+  	transform: translate(-50%, -50%);
 }
 
 @media (max-width: 575px)

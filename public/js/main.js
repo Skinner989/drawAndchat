@@ -128,9 +128,9 @@ function draw(e)
 
   ctx.beginPath();
 
-  ctx.lineWidth = document.getElementById("drawingSize").value;
+  ctx.lineWidth = size;
   ctx.lineCap = "round";
-  ctx.strokeStyle = document.getElementById("drawingColor").value;
+  ctx.strokeStyle = color;
 
   ctx.moveTo(pos.x, pos.y);
   let xsPos = pos.x;
@@ -139,36 +139,48 @@ function draw(e)
   ctx.lineTo(pos.x, pos.y);
 
   ctx.stroke();
-  sendDrawing(xsPos, ysPos, pos.x, pos.y);
-}
 
-function sendDrawing(xsPos, ysPos, xPos, yPos) 
-{
   let data = {
-    x: xPos,
-    y: yPos,
+    x: pos.x,
+    y: pos.y,
     sx: xsPos,
     sy: ysPos,
     color: color,
     size: size,
     name: myName
   };
+  dataToSend.push(data);
+}
 
+let dataToSend = [];
+
+function sendDrawing() 
+{
   let room;
   if(myData.isMine) room = myRoom;
   else  room = myData.otherRoom;
-
   $.ajax({
     url: "/sendDrawing",
     type: 'post',
     data:{
       room: room,
-      data: JSON.stringify(data),
+      data: JSON.stringify(dataToSend),
       socketId: window.sessionStorage.getItem("socketId")
+    },
+    success: function()
+    {
+      dataToSend = [];
     },
     error: function(response)
     {
-      alertERROR("Wystąpił błąd podczas zapisywania zmian rysunku.\nKod błędu: " + response.status);
+      if(response.status == 401)
+      {
+        getNewToken(sendDrawing);
+      }
+      else
+      {
+        alertERROR("Bład połączenia z pokojem użytkownika.\nKod błędu: " + response.status);
+      }
     }
   });
 }
@@ -176,17 +188,19 @@ function sendDrawing(xsPos, ysPos, xPos, yPos)
 socket.on('draw', function(responseData) 
 {
   const data = JSON.parse(responseData);
-
-  if(data.name != myName)
+  data.forEach(function (item) 
   {
-    ctx.beginPath()
-    ctx.lineWidth = data.size;
-    ctx.lineCap = "round";
-    ctx.strokeStyle = data.color;
-    ctx.moveTo(data.sx, data.sy);
-    ctx.lineTo(data.x, data.y);
-    ctx.stroke();
-  } 
+    if(item.name != myName) 
+    {
+      ctx.beginPath()
+      ctx.lineWidth = item.size;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = item.color;
+      ctx.moveTo(item.sx, item.sy);
+      ctx.lineTo(item.x, item.y);
+      ctx.stroke();
+    } 
+  });
 });
 
 socket.on('connect', () => 
@@ -397,17 +411,16 @@ socket.on('joinedToRoom', function(room, name)
       }
       let newUser = document.createElement('div');
       newUser.setAttribute('id', 'U' + name);
-      newUser.classList.add('row', 'roomUser', 'newUser', 'm-0', 'p-0', 'col-lg-2', 'col-md-4', 'pt-2', 'pb-2', 'col-sm-4');
+      newUser.classList.add('row', 'roomUser', 'newUser', 'm-0', 'p-0', 'col-lg-2', 'col-md-4', 'col-sm-4');
       let newUsername = document.createElement('div');
       newUsername.innerHTML = name;
       newUsername.classList.add('roomUsername', 'm-0', 'p-0', 'col-10');
       let newUserRemoveButtonContainer = document.createElement('div');
       newUserRemoveButtonContainer.classList.add('removeButtonContainer', 'm-0', 'p-0', 'col-2');
-      let newUserRemoveButton = document.createElement('img');
-      newUserRemoveButton.classList.add('float-right');
+      let newUserRemoveButton = document.createElement('i');
       newUserRemoveButton.setAttribute('id', 'removeButton_' + name);
       newUserRemoveButton.setAttribute('onclick', 'removeUser(this.id);');
-      newUserRemoveButton.setAttribute('src', './img/x.png');
+      newUserRemoveButton.classList.add('center', 'fa-solid', 'fa-x');
       document.querySelector("#roomUsers").appendChild(newUser);
       newUser.appendChild(newUsername);
       newUser.appendChild(newUserRemoveButtonContainer);
@@ -474,7 +487,8 @@ function getRoomUsers()
   }
   for(const item of roomUsers) 
   {
-    $("#roomUsers").append('<div id="U' + item + '" class="row roomUser m-0 p-0 pt-2 pb-2 col-lg-2 col-md-4 col-sm-4"><div class="roomUsername m-0 p-0 col-10">' + item + '</div><div class="removeButtonContainer m-0 p-0 col-2"><img id="removeButton_' + item + '" src="./img/x.png" onclick="removeUser(this.id);" class="float-right"></div></div>');
+    $("#roomUsers").append('<div id="U' + item + '" class="row roomUser m-0 p-0 col-lg-2 col-md-4 col-sm-4"><div class="roomUsername m-0 p-0 pt-2 col-10">'
+    + item + '</div><div class="removeButtonContainer m-0 p-0 col-2" id="removeButton_' + item + '" onclick="removeUser(this.id);"><i class="center fa-solid fa-x"></i></div></div>');
   } 
 }
 
@@ -588,8 +602,7 @@ function sizeChange()
 
 function sendData() 
 {
-  WIDTH = document.getElementById("drawingBoxContent").offsetWidth;
-  HEIGHT = document.getElementById("drawingBoxContent").offsetHeight;
+  sendDrawing();
   const dataURL = document.getElementById("draw").toDataURL();
   let ID;
 
@@ -601,7 +614,6 @@ function sendData()
   {
     ID = myData.otherId;
   }
-
   $.ajax({
     url: "/update",
     type: 'post',
@@ -771,7 +783,7 @@ function getNewToken(functionToExecute, functionArgument)
     },
     error: function()
     {
-      alertERROR("Sesja wygasła. Zaloguj się ponownie");
+      alertERROR("Sesja wygasła. Zaloguj się ponownie1212");
       window.sessionStorage.setItem("sessionExpired", true);
       logout();
     }

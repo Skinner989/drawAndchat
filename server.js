@@ -131,6 +131,27 @@ io.sockets.on('connection', function(socket)
   }
 );
 
+app.post("/sendDrawing", authenticateToken, async function(req, res) 
+{
+	if(req.body.room && req.body.data && req.body.socketId) 
+	{
+		try
+		{
+			await checkIfRoomMember(req.body.room, req.body.socketId);
+			io.in(req.body.room).emit('draw', req.body.data);
+			res.sendStatus(200);
+		}
+		catch
+		{
+			res.status(403).send("Uzytkownik nie jest członkiem pokoju");
+		}
+	}
+	else 
+	{
+		res.status(400).send("Nie podano wymaganych danych");
+	}
+});
+
 app.post("/addMeToOnlineUsers", authenticateToken, function(req, res) 
 {
 	if(req.user.name)
@@ -245,7 +266,7 @@ function authenticateToken(req, res, next)
 	let token = authHeader && authHeader.split(' ')[1];
 	if(token === undefined)
 	{
-		token = req.cookies.token;
+		token = req.cookies.accessToken;
 		if(token === undefined) return res.sendStatus(401)
 	}
 	jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => 
@@ -258,7 +279,7 @@ function authenticateToken(req, res, next)
 
 app.post("/token", function(req, res)
 {
-	const refreshToken = req.body.token;
+	const refreshToken = req.cookies.refreshToken;
 	if(refreshToken === undefined) return res.sendStatus(401)
 	const db = new Database(config_mysql);
 	db.Start();
@@ -272,7 +293,8 @@ app.post("/token", function(req, res)
 				if(err) return res.sendStatus(401)
 				const userData = {id: user.id, name: user.name, room: user.room};
 				const accessToken = generateAccessToken(userData);
-				res.status(200).send({accessToken: accessToken});
+				res.cookie('accessToken', accessToken, {httpOnly: true});
+				res.status(200).send({message: "OK"});
 			});
 		}
 		else
@@ -377,7 +399,8 @@ app.post("/signin", async function(req, res)
 						db.Stop();
 						if(response.exit_code === 0) 
 						{
-							res.cookie('token', accessToken, { httpOnly: true });
+							res.cookie('accessToken', accessToken, {httpOnly: true});
+							res.cookie('refreshToken', refreshToken, {httpOnly: true});
 							res.status(200).send(packet);
 							req.session.name = user.name;
 							req.session.room = user.room;
