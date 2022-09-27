@@ -211,7 +211,7 @@ body
 	height: 51px;
 }
 
-.alert-container
+.alert-mainContainer
 {
 	display: none;
 	position: fixed; 
@@ -220,15 +220,31 @@ body
 	left: 0;
 	top: 0;
 	width: 100%;
-	cursor: pointer;
 }
 
-.alert-content
+.alert-subContainer
 {
-	margin-left: auto !important;
-	margin-right: auto !important;
-	margin: 2% auto; 
+	margin: 2%; 
+	margin-left: auto;
+	margin-right: auto;
 	width: 60%;
+	padding: 0;
+}
+
+.alert-subContainer div
+{
+	cursor: pointer;
+	margin: 0; 
+	width: 100%;
+}
+
+.alertContent
+{
+	/* text-overflow: ellipsis;
+	overflow: hidden;
+	white-space: nowrap; */
+	overflow-wrap: break-word;
+	white-space: normal;
 }
 
 @media (min-width: 1050px) 

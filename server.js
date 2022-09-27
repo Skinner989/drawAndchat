@@ -43,12 +43,36 @@ app.get('/', (req,res)=>
 const server = http.createServer(app).listen(PORT, ()=> 
 {
   console.log(`Startowanie servera na porcie ${PORT}`);
+  clearRefreshTokens(true);
 })
 
-var io = require('socket.io')(server, {cors: {origin: "*"}});
-
+const io = require('socket.io')(server, {cors: {origin: "*"}});
 let onlineUsers = [];
 const joinRequestResponses = new Map()
+
+async function clearRefreshTokens(initialization)
+{
+	const expTime = 3600000;
+	const currentData = Date.now();
+	try
+	{
+		const db = new Database(config_mysql);
+		db.Start();
+		await db.Query('DELETE FROM refreshtokens WHERE (`created(miliseconds)` + ?) < ?', [expTime, currentData]).then((response) => 
+		{
+			db.Stop();
+			if(response.exit_code !== 0) 
+			{
+				console.log("Nie udało się usunąć starych tokenów z bazy danych");
+			}
+		});
+	}
+	catch(err)
+	{
+		console.log("Błąd połączenia z bazą danych", err);
+		if(initialization) process.exit();
+	}
+}
 
 io.sockets.on('connection', function(socket) 
 {
@@ -77,10 +101,6 @@ io.sockets.on('connection', function(socket)
 		socket.leave(room);
 		socket.in(room).emit('userLeft', room, name);
 	});
-    socket.on('mouse', function(data, room) 
-	{
-        socket.in(room).emit('mouse', data);
-    });
 	socket.on('msg', function(data) 
 	{
         io.sockets.in(data.room).emit('msg', data);
@@ -100,21 +120,13 @@ io.sockets.on('connection', function(socket)
 	{
         socket.in(room).emit('considerJoinRequest', name, roomOwnerName);
     });
-	socket.on('sendJoinRequestResponse', function(roomOwnerName, room, name, decision) 
+	socket.on('sendJoinRequestResponse', function(roomOwnerName, name, decision) 
 	{
 		if(decision)
 		{
 			joinRequestResponses.set(name, {dec: decision});
 		}
         io.emit('joinRequestResponse', roomOwnerName, name, decision);
-    });
-	socket.on('add', function(name) 
-	{
-		if(!onlineUsers.includes(name)) 
-		{
-			onlineUsers.push(name);
-			socket.broadcast.emit('addOnlineUser', name);
-		}
     });
 	socket.on('getOnlineUsers', function(name, room) 
 	{
@@ -123,10 +135,6 @@ io.sockets.on('connection', function(socket)
 	socket.on('removeUser', function(name, room)
 	{
         socket.in(room).emit('removeFromRoom', name);
-    });
-	socket.on('removeMessages', function(room)
-	{
-        socket.in(room).emit('removeMessagesNotification');
     });
   }
 );
@@ -295,40 +303,15 @@ app.post("/token", function(req, res)
 				const accessToken = generateAccessToken(userData);
 				res.cookie('accessToken', accessToken, {httpOnly: true});
 				res.status(200).send({message: "OK"});
+				clearRefreshTokens(false);
 			});
 		}
 		else
 		{
-			res.sendStatus(400);
+			res.sendStatus(401);
+			clearRefreshTokens(false);
 		}
 	});
-});
-
-app.post("/checkRefreshToken", async function(req, res)
-{
-	const refreshToken = req.body.token;
-	if(refreshToken === undefined) return res.sendStatus(401)
-	jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err) =>
-	{
-		if(err) return res.sendStatus(401)
-	});
-	try 
-	{
-		const db = new Database(config_mysql);
-		db.Start();
-		await db.Query('INSERT INTO `refreshtokens` (`ID`, `token`) VALUES (NULL, ?)', [refreshToken]).then(() => 
-		{
-			db.Stop();
-			res.sendStatus(204);
-		});
-	} 
-	catch(err)
-	{
-		if(err.code !== 'ER_DUP_ENTRY')
-		{
-			console.log(err.message)
-		}
-	}
 });
 
 app.post("/signup", async function(req, res) 
@@ -391,19 +374,19 @@ app.post("/signin", async function(req, res)
 					const username = req.body.username;
 					const user = {id: data.result[0].ID, name: username, room: 'room_' + data.result[0].ID};
 					const accessToken = generateAccessToken(user);
-					const refreshToken = jwt.sign(user, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '60m' });
-					let packet = {userID: data.result[0].ID, username: req.body.username, accessToken: accessToken, refreshToken: refreshToken, drawing: data.result[0].drawing};
+					const refreshToken = jwt.sign(user, process.env.REFRESH_TOKEN_SECRET, {expiresIn: '60m'});
+					let packet = {userID: data.result[0].ID, username: req.body.username};
 					db.Start();
-					db.Query('INSERT INTO `refreshtokens` (`ID`, `token`) VALUES (NULL, ?)', [refreshToken]).then((response) => 
+					db.Query('INSERT INTO `refreshtokens` (`ID`, `token`, `created(miliseconds)`) VALUES (NULL, ?, ?)', [refreshToken, Date.now()]).then((response) => 
 					{
 						db.Stop();
 						if(response.exit_code === 0) 
 						{
 							res.cookie('accessToken', accessToken, {httpOnly: true});
 							res.cookie('refreshToken', refreshToken, {httpOnly: true});
-							res.status(200).send(packet);
 							req.session.name = user.name;
 							req.session.room = user.room;
+							res.status(200).send(packet);
 						}
 						else 
 						{
@@ -430,6 +413,36 @@ app.post("/signin", async function(req, res)
 	{
 		res.status(400).send("Podane dane są nieprawidłowe");
 	}
+});
+
+app.get("/checkSession", function(req, res) 
+{
+	const authHeader = req.headers['authorization'];
+	let token = authHeader && authHeader.split(' ')[1];
+	if(token === undefined)
+	{
+		token = req.cookies.accessToken;
+		if(token === undefined) return res.sendStatus(401)
+	}
+	jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => 
+	{
+		if (err) return res.sendStatus(401)
+		else
+		{
+			req.user = user;
+			const db = new Database(config_mysql);
+			db.Start();
+			db.Query('SELECT * FROM users WHERE username = ?', [req.user.name]).then((response) => 
+			{
+				db.Stop();
+				if(response.exit_code === 0 && response.result.length === 1) 
+				{
+					let packet = {userID: response.result[0].ID, username: req.user.name};
+					res.status(200).send(packet);
+				}
+			});
+		}
+	});
 });
 
 app.post("/update", authenticateToken, async function(req, res) 
@@ -562,31 +575,6 @@ app.delete("/removeMessages", authenticateToken, function(req, res)
 	}
 });
 
-app.get("/getName", authenticateToken, function(req, res) 
-{
-	if(req.user.id) 
-	{
-		const db = new Database(config_mysql);
-		db.Start();
-		db.Query('SELECT username FROM users WHERE ID = ?', [req.user.id]).then((response) => 
-		{
-			db.Stop();
-			if(response.exit_code === 0) 
-			{
-				res.status(200).send({username: response.result[0].username});
-			}
-			else 
-			{
-				res.status(500).send("Nieoczekiwany błąd serwera");
-			}
-		});
-	}
-	else
-	{
-		res.status(400).send("Niepoprawny token");
-	}
-});
-
 app.post("/blockUser", authenticateToken, function(req, res) 
 {
 	if(req.user.name && req.body.username) 
@@ -624,37 +612,6 @@ app.post("/unblockUser", authenticateToken, function(req, res)
 			if(response.exit_code === 0) 
 			{
 				res.sendStatus(200);
-			}
-			else 
-			{
-				res.status(500).send("Nieoczekiwany błąd serwera");
-			}
-		});
-	}
-	else 
-	{
-		res.status(400).send("Nie podano wymaganych danych");
-	}
-});
-
-app.get("/checkUser", authenticateToken, function(req, res) 
-{
-	if(req.query.roomOwnerName && req.user.name) 
-	{
-		const db = new Database(config_mysql);
-		db.Start();
-		db.Query('SELECT * FROM blockedUsers WHERE roomOwnerName = ? AND username = ?', [req.query.roomOwnerName, req.user.name]).then((response) => {
-			db.Stop();
-			if(response.exit_code === 0) 
-			{
-				if(response.result.length >= 1) 
-				{
-					res.status(200).send({message: "Użytkownik jest zablokowany w tym pokoju", isBlocked: true});
-				}
-				else 
-				{
-					res.status(200).send({message: "Użytkownik nie jest zablokowany w tym pokoju", isBlocked: false});
-				}
 			}
 			else 
 			{
@@ -783,31 +740,6 @@ app.get("/getUserImg", authenticateToken, async function(req, res)
 	}
 });
 
-app.get("/getUserId", authenticateToken, function(req, res) 
-{
-	if(req.query.username) 
-	{
-		const db = new Database(config_mysql);
-		db.Start();
-		db.Query('SELECT id FROM users WHERE username = ?', [req.query.username]).then((response) => 
-		{
-			db.Stop();
-			if(response.exit_code === 0)
-			{			
-				res.status(200).send({id: response.result});
-			}
-			else 
-			{
-				res.status(500).send("Nieoczekiwany błąd serwera");
-			}
-		});
-	}
-	else
-	{
-		res.status(400).send("Nie podano wymaganych danych");
-	}
-});
-
 app.get("/getOtherImg", authenticateToken, async function(req, res) 
 {
 	if(req.query.username && req.query.room && req.query.socketId) 
@@ -854,35 +786,44 @@ app.get("/getOtherImg", authenticateToken, async function(req, res)
 	}
 });
 
+app.delete("/clearCookie", function(req, res) 
+{
+	res.clearCookie('accessToken');
+	res.clearCookie('refreshToken');
+	req.session.destroy();
+});
+
 app.post("/logout", function(req, res) 
 {
-	if(req.body.username && req.body.room && req.body.token)
+	if(req.session.name && req.body.room)
 	{
-		const db = new Database(config_mysql);
-		db.Start();
-		db.Query('DELETE FROM `refreshtokens` WHERE `token` = ?', [req.body.token]).then((response) => 
+		onlineUsers.splice(onlineUsers.indexOf(req.body.username), 1);
+		io.emit('removeOnlineUser', req.session.name, onlineUsers);
+		io.in(req.body.room).emit('userLeft', req.body.room, req.session.name);
+		if(req.body.removeToken === true)
 		{
-			db.Stop();
-			if(response.exit_code === 0) 
+			if(req.cookies.refreshToken !== undefined)
 			{
-				res.sendStatus(204);
-				if(req.body.room === "none" && onlineUsers.includes(req.body.username))
+				const db = new Database(config_mysql);
+				db.Start();
+				db.Query('DELETE FROM `refreshtokens` WHERE `token` = ?', [req.cookies.refreshToken]).then((response) => 
 				{
-					onlineUsers.splice(onlineUsers.indexOf(req.body.username), 1);
-					io.emit('removeOnlineUser', req.body.username, onlineUsers);
-				}
-				else if(req.body.room !== "none" && onlineUsers.includes(req.body.username))
-				{
-					onlineUsers.splice(onlineUsers.indexOf(req.body.username), 1);
-					io.emit('removeOnlineUser', req.body.username, onlineUsers);
-					io.in(req.body.room).emit('userLeft', req.body.room, req.body.username);
-				}
+					db.Stop();
+					if(response.exit_code === 0) 
+					{
+						res.sendStatus(204);
+					}
+					else 
+					{
+						res.status(500).send("Nieoczekiwany błąd serwera");
+					}
+				});				
 			}
-			else 
+			else
 			{
-				res.status(500).send("Nieoczekiwany błąd serwera");
+				res.sendStatus(400);
 			}
-		});
+		}
 	}
 	else
 	{

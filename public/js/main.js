@@ -17,27 +17,92 @@ class Variables
 // Refresh
 window.sessionStorage.removeItem("otherRoom");
 
+let amountOfAlerts = 0;
+let alertNum = 0
+
 function hideAlert() 
 {
 	$("#alert")[0].style.display = "none";
-	$("#alertOk")[0].style.display = "none";
-	$("#alertError")[0].style.display = "none";
 }
 
 function alertOK(contents) 
 {
-	hideAlert();
-	$("#alert").show().delay(5000).fadeOut('slow');
-	$("#alertOk").show();
-	$("#alertContentOk").html(contents);
+  $("#alert").show();
+  amountOfAlerts = document.querySelectorAll(".alert-success").length + document.querySelectorAll(".alert-danger").length;
+  let newAlert = document.createElement('div');
+  newAlert.setAttribute('id', 'alert_' + alertNum);
+  newAlert.classList.add('alert', 'alert-subContainer');
+  let newAlertContainer = document.createElement('div');
+  newAlertContainer.setAttribute('id', 'alertContainer_' + alertNum);
+  newAlertContainer.classList.add('alert', 'alert-success');
+  newAlertContainer.setAttribute('onclick', 'removeAlert(this.id);');
+  let newAlertContent = document.createElement('div');
+  newAlertContent.innerHTML = contents;
+  newAlertContent.classList.add('alertContent');
+  let newAlertRemoveButton = document.createElement('a');
+  newAlertRemoveButton.innerHTML = '&times';
+  newAlertRemoveButton.setAttribute('href', '#');
+  newAlertRemoveButton.classList.add('close', 'text-center');
+  newAlertRemoveButton.setAttribute('id', 'removeAlert_' + alertNum);
+  newAlertRemoveButton.setAttribute('onclick', 'removeAlert(this.id);');
+  newAlert.appendChild(newAlertContainer);
+  newAlertContainer.appendChild(newAlertRemoveButton);
+  newAlertContainer.appendChild(newAlertContent);
+  document.querySelector("#alert").appendChild(newAlert);
+  alertNum++;
+  const tempAlertNumber = alertNum-1;
+  autoRemoveAlert(tempAlertNumber);
 }
 
 function alertERROR(contents) 
 {
-	hideAlert();
-	$("#alert").show().delay(5000).fadeOut('slow');
-	$("#alertError").show();
-	$("#alertContentError").html(contents);
+  $("#alert").show();
+  amountOfAlerts = document.querySelectorAll(".alert-success").length + document.querySelectorAll(".alert-danger").length;
+  let newAlert = document.createElement('div');
+  newAlert.setAttribute('id', 'alert_' + alertNum);
+  newAlert.classList.add('alert', 'alert-subContainer');
+  let newAlertContainer = document.createElement('div');
+  newAlertContainer.setAttribute('id', 'alertContainer_' + alertNum);
+  newAlertContainer.classList.add('alert', 'alert-danger');
+  newAlertContainer.setAttribute('onclick', 'removeAlert(this.id);');
+  let newAlertContent = document.createElement('div');
+  newAlertContent.innerHTML = contents;
+  newAlertContent.classList.add('alertContent');
+  let newAlertRemoveButton = document.createElement('a');
+  newAlertRemoveButton.innerHTML = '&times';
+  newAlertRemoveButton.setAttribute('href', '#');
+  newAlertRemoveButton.classList.add('close', 'text-center');
+  newAlertRemoveButton.setAttribute('id', 'removeAlert_' + alertNum);
+  newAlertRemoveButton.setAttribute('onclick', 'removeAlert(this.id);');
+  newAlert.appendChild(newAlertContainer);
+  newAlertContainer.appendChild(newAlertRemoveButton);
+  newAlertContainer.appendChild(newAlertContent);
+  document.querySelector("#alert").appendChild(newAlert);
+  alertNum++;
+  const tempAlertNumber = alertNum-1;
+  autoRemoveAlert(tempAlertNumber);
+}
+
+function removeAlert(id)
+{
+  let alertId = id.split('_')[1];
+  $("#alert_" + alertId).remove();
+  amountOfAlerts = document.querySelectorAll(".alert-success").length + document.querySelectorAll(".alert-danger").length;
+  if(amountOfAlerts == 0) hideAlert();
+}
+
+function autoRemoveAlert(id)
+{
+  setTimeout(() =>
+  {
+    $("#alert_" + id).fadeOut('slow');
+    setTimeout(() =>
+    {
+      $("#alert_" + id).remove();
+      amountOfAlerts = document.querySelectorAll(".alert-success").length + document.querySelectorAll(".alert-danger").length;
+      if(amountOfAlerts == 0) hideAlert();
+    }, 500);
+  }, 5000);
 }
 
 const myData = new Variables();
@@ -60,6 +125,7 @@ if(sessionStorage.getItem("roomUsers") !== null)
   roomUsers = JSON.parse(sessionStorage.getItem("roomUsers"));
 }
 
+let myTimeout;
 function resize() 
 {
   ctx.canvas.width = document.getElementById("drawingBoxContent").offsetWidth;
@@ -76,7 +142,15 @@ function resize()
   // {
   //   getOtherData(myData.otherName, false);
   // }
-  getUserData(false);
+  myTimeout = setTimeout(() =>
+  {
+    getUserData(false);
+    while(myTimeout)
+    {
+      window.clearTimeout(myTimeout);
+      myTimeout--
+    }
+  }, 500);
 }
 
 window.addEventListener("resize", resize);
@@ -250,6 +324,7 @@ socket.on('newMessage', function(author, msg)
   $("#message_" + myData.numberOfMessages)[0].style.overflow = "hidden";
   $("#message_" + myData.numberOfMessages)[0].style.resize = "none";
   myData.numberOfMessages++;
+  $("#messages").scrollTop($("#messages").prop("scrollHeight"));
 });
 
 socket.on('removeMessagesNotification', function() 
@@ -258,11 +333,6 @@ socket.on('removeMessagesNotification', function()
   $("#messages").html('');
   $("#messages").append('<p class="col-11 m-0 p-0 ml-auto mr-auto mt-3"> Brak wiadomości </p>');
   myData.numberOfMessages = 0;
-});
-
-socket.on('onlineUsers', function(onlineUsers) 
-{
-  updateOnlineUsers(onlineUsers);
 });
 
 socket.on('checkIfOnlineResponse', function (name, roomOwnerName, decision)
@@ -282,10 +352,7 @@ socket.on('checkIfOnlineResponse', function (name, roomOwnerName, decision)
 
 socket.on('getOnlineUsersResponse', function(name, onlineUsers)
 {
-  if(name == myName)
-  {
-    updateOnlineUsers(onlineUsers);
-  }
+  updateOnlineUsers(onlineUsers);
 });
 
 socket.on('addOnlineUser', function(user)
@@ -414,7 +481,7 @@ socket.on('joinedToRoom', function(room, name)
       newUser.classList.add('row', 'roomUser', 'newUser', 'm-0', 'p-0', 'col-lg-2', 'col-md-4', 'col-sm-4');
       let newUsername = document.createElement('div');
       newUsername.innerHTML = name;
-      newUsername.classList.add('roomUsername', 'm-0', 'p-0', 'col-10');
+      newUsername.classList.add('roomUsername', 'm-0', 'p-0', 'pt-2', 'col-10');
       let newUserRemoveButtonContainer = document.createElement('div');
       newUserRemoveButtonContainer.classList.add('removeButtonContainer', 'm-0', 'p-0', 'col-2');
       let newUserRemoveButton = document.createElement('i');
@@ -505,10 +572,10 @@ function removeUser(user)
     success: function()
     {
       const index = roomUsers.indexOf(name);
-      if (index > -1) 
+      if(index > -1) 
       {
         roomUsers.splice(index, 1);
-        sessionStorage.setItem("roomUsers", JSON.stringify(roomUsers));
+        sessionStorage.setItem("roomUsers", JSON.stringify(roomUsers));//
       }
     },
     error: function(response)
@@ -525,39 +592,10 @@ function removeUser(user)
   });
 }
 
-function getName() 
-{
-  $.ajax({
-    url: "/getName",
-    type: 'get',
-    dataType: 'json',
-    success: function(data)
-    {
-      myName = data.username;
-      window.sessionStorage.setItem("myName", data.username);
-      socket.emit('add', myName);
-      socket.emit('getOnlineUsers', myName, myRoom);
-      $("#loggedUser").append(myName);
-      loadBlockedUsers();
-    },
-    error: function(response)
-    {
-      if(response.status == 401)
-      {
-        getNewToken(getName);
-      }
-      else
-      {
-        alertERROR("Wystąpił błąd podczas próby załadowania profilu użytkownika.\nKod błędu: " + response.status);
-      }
-    }
-  });
-}
-
 function updateOnlineUsers(onlineUsers) 
 {
   $("#onlineUsers").html("");
-  if((onlineUsers.length == 1) && (onlineUsers.includes(myName))) 
+  if((onlineUsers.length == 1) && (onlineUsers.includes(myName)) || (onlineUsers.length == 0)) 
   {
     $("#onlineUsers").append('<div class="noUsers m-0 ml-auto mr-auto p-0 pt-2 pb-2 col-2">Brak</div>');
     myData.noOnlineUsers = true;
@@ -766,45 +804,32 @@ function loadMsgs()
 }
 
 function getNewToken(functionToExecute, functionArgument)
-{
-  $.ajax({
-    url: "/token",
-    type: 'post',
-    success: function()
-    {
-      if(functionArgument == null)
+{  
+  return new Promise((resolve) => 
+  {
+    $.ajax({
+      url: "/token",
+      type: 'post',
+      success: function()
       {
-        functionToExecute();
-      }
-      else
+        resolve();
+        if(functionArgument == null)
+        {
+          functionToExecute();
+        }
+        else
+        {
+          functionToExecute(functionArgument);
+        }
+      },
+      error: function()
       {
-        functionToExecute(functionArgument);
+        alertERROR("Sesja wygasła. Zaloguj się ponownie");
+        window.sessionStorage.setItem("sessionExpired", true);
+        logout();
+        resolve();
       }
-    },
-    error: function()
-    {
-      alertERROR("Sesja wygasła. Zaloguj się ponownie1212");
-      window.sessionStorage.setItem("sessionExpired", true);
-      logout();
-    }
-  });
-}
-
-function checkRefreshToken()
-{
-  $.ajax({
-    url: "/checkRefreshToken",
-    type: 'post',
-    data:{
-      token: window.sessionStorage.getItem("refreshToken")
-    },
-    dataType: 'json',
-    error: function()
-    {
-      alertERROR("Sesja wygasła. Zaloguj się ponownie");
-      window.sessionStorage.setItem("sessionExpired", true);
-      logout();
-    }
+    });
   });
 }
 
@@ -851,6 +876,7 @@ function openChat()
     if(myData.numberOfMessages != 0) 
     {
       resizeMsgs();
+      $("#messages").scrollTop($("#messages").prop("scrollHeight"));
     }
     myData.block = true;
   }
@@ -1059,7 +1085,6 @@ function getUserData(loadMsgsRequest)
       {
         loadMsgs();
       }
-      $("#drawingBoxContent")[0].style.display = "none";
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const img = new Image;
       $("#drawingBoxContent").fadeIn(1000);
@@ -1069,7 +1094,7 @@ function getUserData(loadMsgsRequest)
       }
       img.onload = function()
       {
-        ctx.drawImage(img,0,0);
+        ctx.drawImage(img, 0, 0);
       };
       if(!myData.isMine)
       {
@@ -1093,7 +1118,7 @@ function getUserData(loadMsgsRequest)
   });
 }
 
-function leave(loadRequest) 
+function leave(loadRequest) //
 {
   window.sessionStorage.removeItem("otherName");
   window.sessionStorage.removeItem("otherRoom");
@@ -1115,23 +1140,34 @@ function clearCookie()
   });
 }
 
+function preLogout()
+{
+  window.sessionStorage.setItem("logout", true);
+  logout();
+}
+
 function logout()
 {
   if(window.sessionStorage.getItem("otherRoom") === null)
   {
-    let blob = new Blob([JSON.stringify({username: window.sessionStorage.getItem("myName"), room: "none"})], {type : 'application/json; charset=UTF-8'});
+    let blob = new Blob([JSON.stringify({username: window.sessionStorage.getItem("myName"), removeToken: true, room: myRoom})], {type : 'application/json; charset=UTF-8'});
     navigator.sendBeacon("/logout", blob);
   }
   else
   {
-    let blob = new Blob([JSON.stringify({username: window.sessionStorage.getItem("myName"), room: window.sessionStorage.getItem("otherRoom")})], {type : 'application/json; charset=UTF-8'});
+    let blob = new Blob([JSON.stringify({username: window.sessionStorage.getItem("myName"), removeToken: true, room: window.sessionStorage.getItem("otherRoom")})], {type : 'application/json; charset=UTF-8'});
     navigator.sendBeacon("/logout", blob);
   }
-  clearCookie();
   if(window.sessionStorage.getItem("sessionExpired"))
   {
     window.sessionStorage.clear();
     window.sessionStorage.setItem("sessionExpired", true);
+    window.location.href = 'start.html';
+  }
+  else if(window.sessionStorage.getItem("logout"))
+  {
+    window.sessionStorage.clear();
+    window.sessionStorage.setItem("logout", true);
     window.location.href = 'start.html';
   }
   else
@@ -1143,28 +1179,34 @@ function logout()
 
 function addMeToOnlineUsers()
 {
-  $.ajax({
-    url: "/addMeToOnlineUsers",
-    type: 'post',
-    error: function(response)
-    {
-      if(response.status == 401)
+  return new Promise((resolve) => 
+  {
+    $.ajax({
+      url: "/addMeToOnlineUsers",
+      type: 'post',
+      success: function()
       {
-        getNewToken(addMeToOnlineUsers);
-      }
-      else
+        resolve();
+      },
+      error: async function(response)
       {
-        alertERROR("Wystąpił błąd podczas dodawania użytkownika do listy aktywnych użytkowników" + response.status);
+        if(response.status == 401)
+        {
+          await getNewToken(addMeToOnlineUsers);
+          resolve();
+        }
+        else
+        {
+          window.sessionStorage.setItem("sessionExpired", true);
+          logout();
+        }
       }
-    }
+    });
   });
 }
 
 function start() 
 {
-  checkRefreshToken();
-  addMeToOnlineUsers();
-  socket.emit('getOnlineUsers', myName);
   $("#loggedUser").append(myName);
   getRoomUsers();
 }
@@ -1172,22 +1214,15 @@ start();
 
 $(document).ready(function() 
 {
-	setTimeout(function()
+	setTimeout(async function()
   {
-    $('#pageContent')[0].style.display = "none";
-    $('#pageContent').fadeIn(1000);
+    await addMeToOnlineUsers();
+    socket.emit('getOnlineUsers', myName);
     loadBlockedUsers();
     loadMsgs();
     resize();
+    $('#pageContent')[0].style.display = "none";
+    $('#pageContent').fadeIn(1000);
 		$('body').addClass('loaded');
-    // Refresh
-    // if(sessionStorage.getItem("otherName") !== null) 
-    // {
-    //   getOtherData(sessionStorage.getItem("otherName"), true);
-    // }
-    // else
-    // {
-    //   getData(true);
-    // }
 	}, 1000);
 });
