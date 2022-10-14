@@ -17,18 +17,14 @@ app.use(express.json({limit: '500mb'}))
 app.use(express.urlencoded({limit: '500mb', extended: false}));
 app.use(cookieparser());
 
+// Database config
+//===================================================
 const config_mysql = {
-
 	"host"     : "localhost",
 	"user"     : "root",
 	"password" : "mysql",
 	"database" : "drawAndChat"
 }
-
-//===================================================
-//===================================================
-//===================================================
-//===================================================
 
 const Database = require('./SQL');
 
@@ -76,9 +72,10 @@ async function clearRefreshTokens(initialization)
 
 io.sockets.on('connection', function(socket) 
 {
-	socket.on('create', function(room) 
+	socket.on('createRoom', function(room)
 	{
 		socket.join(room);
+		io.to(socket.id).emit('createRoomResponse', room);
 	});
 	socket.on('join', function(room, name) 
 	{
@@ -120,7 +117,7 @@ io.sockets.on('connection', function(socket)
 	{
         socket.in(room).emit('considerJoinRequest', name, roomOwnerName);
     });
-	socket.on('sendJoinRequestResponse', function(roomOwnerName, name, decision) 
+	socket.on('sendJoinRequestResponse', function(roomOwnerName, room, name, decision) 
 	{
 		if(decision)
 		{
@@ -128,9 +125,9 @@ io.sockets.on('connection', function(socket)
 		}
         io.emit('joinRequestResponse', roomOwnerName, name, decision);
     });
-	socket.on('getOnlineUsers', function(name, room) 
+	socket.on('getOnlineUsers', function() 
 	{
-        io.emit('getOnlineUsersResponse', name, onlineUsers);
+        io.to(socket.id).emit('getOnlineUsersResponse', onlineUsers);
     });
 	socket.on('removeUser', function(name, room)
 	{
@@ -160,9 +157,29 @@ app.post("/sendDrawing", authenticateToken, async function(req, res)
 	}
 });
 
+app.get("/checkRoom", authenticateToken, function(req, res)
+{
+	if(req.query.room) 
+	{
+		if(req.query.room == 'room_' + req.user.id)
+		{
+			res.sendStatus(200);
+			io.in('room_' + req.user.id).emit('getRoomUser', req.user.id);
+		}
+		else
+		{
+			res.sendStatus(403);
+		}
+	}
+	else 
+	{
+		res.status(400).send("Nie podano wymaganych danych");
+	}
+});
+
 app.post("/addMeToOnlineUsers", authenticateToken, function(req, res) 
 {
-	if(req.user.name)
+	if(req.session.name)
 	{
 		if(!onlineUsers.includes(req.user.name)) 
 		{
@@ -179,13 +196,22 @@ app.post("/addMeToOnlineUsers", authenticateToken, function(req, res)
 
 app.post("/sendJoinRequestResponse", authenticateToken, function(req, res) 
 {
-	if(req.body.room && req.body.username && req.body.decision) 
+	if(req.body.room && req.body.roomUsers && req.body.username && req.body.decision) 
 	{
+		let roomUsers = [];
 		if(req.body.decision)
 		{
+			if(req.body.roomUsers == "none")
+			{
+				roomUsers.push(req.user.name);
+			}
+			else
+			{
+				roomUsers = req.body.roomUsers;
+			}
 			joinRequestResponses.set(req.body.username, {dec: req.body.decision});
 		}
-        io.emit('joinRequestResponse', req.user.name, req.body.username, req.body.decision);
+        io.emit('joinRequestResponse', req.user.name, req.body.username, roomUsers, req.body.decision);
 	}
 	else 
 	{
@@ -198,6 +224,19 @@ app.delete("/removeUserFromRoom", authenticateToken, function(req, res)
 	if(req.body.username) 
 	{
         io.emit('removeFromRoom', req.body.username, req.user.room);
+	}
+	else 
+	{
+		res.status(400).send("Nie podano wymaganych danych");
+	}
+});
+
+app.post("/getRoomUserResponse", authenticateToken, function(req, res)
+{
+	if(req.body.room && req.body.socketId) 
+	{
+        io.in('room_' + req.body.room).emit("getRoomUserResponse", req.body.room, req.body.socketId, req.user.name)
+		res.end();
 	}
 	else 
 	{
@@ -314,7 +353,7 @@ app.post("/token", function(req, res)
 	});
 });
 
-app.post("/signup", async function(req, res) 
+app.put("/signup", async function(req, res) 
 {
 	if(req.body.username && req.body.password) 
 	{
@@ -740,52 +779,6 @@ app.get("/getUserImg", authenticateToken, async function(req, res)
 	}
 });
 
-app.get("/getOtherImg", authenticateToken, async function(req, res) 
-{
-	if(req.query.username && req.query.room && req.query.socketId) 
-	{
-		try
-		{
-			const db = new Database(config_mysql);
-			db.Start();
-			let data = await db.Query('SELECT * FROM users WHERE username = ?', [req.query.username]); 
-			db.Stop();
-			if(data.exit_code === 0)
-			{
-				if(data.result.length === 1) 
-				{
-					try
-					{
-						await checkIfRoomMember('room_' + req.query.room, req.query.socketId);
-						let packet = {drawing: data.result[0].drawing, id: data.result[0].ID};
-						res.status(200).send(packet);
-					}
-					catch
-					{
-						res.status(403).send("Brak uprawnień. Uzytkownik nie jest członkiem pokoju");
-					}
-				}
-				else 
-				{				
-					res.status(500).send("Nieoczekiwany błąd serwera");
-				}	
-			}
-			else 
-			{
-				res.status(400).send("Nie ma takiego użytkownika");
-			}
-		}
-		catch
-		{
-			res.status(400).send("Nie ma takiego użytkownika");
-		}
-	}
-	else 
-	{
-		res.status(400).send("Nie podano wymaganych danych");
-	}
-});
-
 app.delete("/clearCookie", function(req, res) 
 {
 	res.clearCookie('accessToken');
@@ -795,11 +788,14 @@ app.delete("/clearCookie", function(req, res)
 
 app.post("/logout", function(req, res) 
 {
-	if(req.session.name && req.body.room)
+	if(req.body.username && req.body.room)
 	{
-		onlineUsers.splice(onlineUsers.indexOf(req.body.username), 1);
-		io.emit('removeOnlineUser', req.session.name, onlineUsers);
-		io.in(req.body.room).emit('userLeft', req.body.room, req.session.name);
+		if(onlineUsers.includes(req.body.username)) 
+		{
+			let test = onlineUsers.splice(onlineUsers.indexOf(req.body.username), 1);
+			io.emit('removeOnlineUser', req.body.username, onlineUsers);
+		}
+		io.in(req.body.room).emit('userLeft', req.body.room, req.body.username);
 		if(req.body.removeToken === true)
 		{
 			if(req.cookies.refreshToken !== undefined)

@@ -20,82 +20,82 @@
 
 	<div id="pageContent" class="p-0 m-0">
 		<div class="pl-3 pr-3">
-			<div class="managementRow row col-12 mt-2 p-0 mr-0 ml-0">
-				<div class="colorRow row m-0 p-0 mr-2">
-					<label for="drawingColor" class="mr-2">Kolor:</label>
-					<input class="mt-1" name="drawingColor" id="drawingColor" type="color" value="#ff0000" onchange="colorChange();">
-				</div>
-				<div class="logoutRow row justify-content-end text-right m-0 p-0 ml-auto">
-					<div id="loggedUser" class="mr-3">Zalogowany jako: </div>
-					<button id="logout" class="btn btn-danger" onclick="preLogout();">Wyloguj</button>
-				</div>
-				<div class="sizeRow row m-0 p-0">
-					<label for="drawingSize" class="mr-2">Rozmiar:</label>
-					<input name="drawingSize" id="drawingSize" value="10" class="form-control col-2 mr-2 mb-2" onchange="sizeChange();">
-					<div id="chat">
-						<div id="chatImg" class="ml-auto mr-0 p-1"><img src="./img/msg00.png" width="30" height="30" onclick="openChat();"></div>
-						<div class="text-center" id="chatContent">
-							<span id="hideMessages" class="close mr-2 mt-1 text-center" onclick="unlockChat();">&times;</span>
-							<div id="chatHeader" class="text-center bg-secondary p-1 pl-5 pr-5"></div>
-							<div id="messages"></div>
-							<textarea id="contents" class="col-11 p-1 mt-5 mb-0" placeholder="Napisz wiadomość..."></textarea>
-							<button type="button" class="btn btn-success ml-auto mr-auto mb-1" onclick="sendMsg();" style="height:30%;">Wyślij</button>
-						</div>
+		<div class="managementRow row col-12 mt-2 p-0 mr-0 ml-0">
+			<div class="colorRow row m-0 p-0 mr-2">
+				<label for="drawingColor" class="mr-2">Kolor:</label>
+				<input class="mt-1" name="drawingColor" id="drawingColor" type="color" value="#ff0000" onchange="colorChange();">
+			</div>
+			<div class="logoutRow row justify-content-end text-right m-0 p-0 ml-auto">
+				<div id="loggedUser" class="mr-3">Zalogowany jako: </div>
+				<button id="logout" class="btn btn-danger" onclick="preLogout();">Wyloguj</button>
+			</div>
+			<div class="sizeRow row m-0 p-0">
+				<label for="drawingSize" class="mr-2">Rozmiar:</label>
+				<input name="drawingSize" id="drawingSize" value="10" class="form-control col-2 mr-2 mb-2" onchange="sizeChange();">
+				<div id="rubber" class="rubber mt-1 mr-1 mb-2 ml-0" onclick="rubberControl();"><i class="fa-solid fa-eraser"></i></div>
+				<div id="chat">
+					<div id="chatImg" class="ml-auto mr-0 p-1" onclick="openChat();"><i class="fa-solid fa-message"></i></div>
+					<div class="text-center" id="chatContent">
+						<span id="hideMessages" class="close mr-2 mt-1 text-center" onclick="unlockChat();">&times;</span>
+						<div id="chatHeader" class="text-center bg-secondary p-1 pl-5 pr-5"></div>
+						<div id="messages"></div>
+						<textarea id="contents" class="col-11 p-1 mt-5 mb-0" placeholder="Napisz wiadomość..."></textarea>
+						<button type="button" class="btn btn-success ml-auto mr-auto mb-1" onclick="sendMsg();" style="height:30%;">Wyślij</button>
 					</div>
 				</div>
 			</div>
-			<div id="availableButtons" class="col-12 p-0">
-				<button id="blockedBtn" class="btn btn-secondary" onclick="showBlockedUsers();">Zablokowani użytkownicy</button>
-				<button id="leaveBtn" class="btn btn-danger" onclick="leave(true);">Opuść pokój</button>
-			</div>
 		</div>
+		<div id="availableButtons" class="col-12 p-0">
+			<button id="blockedBtn" class="btn btn-secondary" onclick="showBlockedUsers();">Zablokowani użytkownicy</button>
+			<button id="leaveBtn" class="btn btn-danger" onclick="leave(true);">Opuść pokój</button>
+		</div>
+	</div>
 
-		<div id="drawingBox" class="col-12 mt-2 mb-2">
-			<div id="drawingBoxContent" class="p-0 m-0">
-				<canvas id="draw"></canvas>
+	<div id="drawingBox" class="col-12 mt-2 mb-2">
+		<div id="drawingBoxContent" class="p-0 m-0 ml-auto mr-auto">
+			<canvas id="draw" width="1873" height="775"></canvas>
+		</div>
+	</div>
+	<div>
+		<div class="bg-secondary text-center m-0 p-0 pb-1">Użytkownicy w pokoju:</div>
+		<div class="usersContainer row col-12 p-0 mt-0 mr-0 ml-0" id="roomUsers"></div>
+	</div>
+	<div>
+		<div class="bg-secondary text-center m-0 p-0 pb-1">Wpisz nazwę użytkownika, do którego chcesz dołączyć:</div>
+		<div class="usersContainer pt-3 pb-3">
+			<div class="row mr-auto ml-auto col-xl-8 col-lg-10 col-md-11 col-sm-12">
+				<div class="m-0 col-xl-2 col-lg-1 col-md-2 col-sm-2"></div>
+				<input id="username" class="form-control text-center col-xl-8 col-lg-10 col-md-8 col-sm-8" placeholder="Wpisz nazwę użytkownika">
+				<button id="joinToUser" class="btn btn-secondary col-xl-1 col-lg-1 col-md-2 col-sm-2 ml-0 mr-auto">Dołącz</button>
 			</div>
 		</div>
-		<div>
-			<div class="bg-secondary text-center m-0 p-0 pb-1">Użytkownicy w moim pokoju:</div>
-			<div class="usersContainer row col-12 p-0 mt-0 mr-0 ml-0" id="roomUsers"></div>
-		</div>
-		<div>
-			<div class="bg-secondary text-center m-0 p-0 pb-1">Wpisz nazwę użytkownika, do którego chcesz dołączyć:</div>
-			<div class="usersContainer pt-3 pb-3">
-				<div class="row mr-auto ml-auto col-xl-8 col-lg-10 col-md-11 col-sm-12">
-					<div class="m-0 col-xl-2 col-lg-1 col-md-2 col-sm-2"></div>
-					<input id="username" class="form-control text-center col-xl-8 col-lg-10 col-md-8 col-sm-8" placeholder="Wpisz nazwę użytkownika">
-					<button id="joinToUser" class="btn btn-secondary col-xl-1 col-lg-1 col-md-2 col-sm-2 ml-0 mr-auto">Dołącz</button>
-				</div>
-			</div>
-		</div>
-		<div>
-			<div class="bg-secondary text-center m-0 p-0 pb-1">Inni użytkownicy online:</div>
-			<div class="usersContainer row col-12 p-0 mt-0 mb-2 mr-0 ml-0" id="onlineUsers"></div>
-		</div>
+	</div>
+	<div>
+		<div class="bg-secondary text-center m-0 p-0 pb-1">Inni użytkownicy online:</div>
+		<div class="usersContainer row col-12 p-0 mt-0 mb-2 mr-0 ml-0" id="onlineUsers"></div>
+	</div>
 
-		<div id="blockedUsers" class="col-12">
-			<div id="blockedUsersContainer" class="col-xl-5 col-md-9 p-0 text-center">
-				<span class="close mr-1 mt-1" onclick="hideBlockedUsers();">&times;</span>
-				<h2 class="mb-4 mt-4">Użytkownicy zablokowani w moim pokoju: </h2>
-				<div id="blockedUsersContent" class="col-11 ml-auto mr-auto"></div>
-				<button class="btn btn-danger mt-4 mb-4" onclick="hideBlockedUsers();">Zamknij</button>
-			</div>
+	<div id="blockedUsers" class="col-12">
+		<div id="blockedUsersContainer" class="col-xl-5 col-md-9 p-0 text-center">
+			<span class="close mr-1 mt-1" onclick="hideBlockedUsers();">&times;</span>
+			<h2 class="mb-4 mt-4">Użytkownicy zablokowani w moim pokoju: </h2>
+			<div id="blockedUsersContent" class="col-11 ml-auto mr-auto"></div>
+			<button class="btn btn-danger mt-4 mb-4" onclick="hideBlockedUsers();">Zamknij</button>
 		</div>
+	</div>
 
-		<div id="removeMessagesConfirmation" class="col-12">
-			<div id="confirmationContainer" class="col-xl-5 col-md-9 p-0 text-center">
-				<h2 class="mb-4 mt-4">Czy napewno chcesz wyszyścić chat?</h2>
-				<button class="btn btn-success mt-4 mb-4" onclick="removeAllMessages();">Zatwierdź</button>
-				<button class="btn btn-danger mt-4 mb-4" onclick="removeMessagesConfirmation();">Anuluj</button>
-			</div>
+	<div id="removeMessagesConfirmation" class="col-12">
+		<div id="confirmationContainer" class="col-xl-5 col-md-9 p-0 text-center">
+			<h2 class="mb-4 mt-4">Czy napewno chcesz wyszyścić chat?</h2>
+			<button class="btn btn-success mt-4 mb-4" onclick="removeAllMessages();">Zatwierdź</button>
+			<button class="btn btn-danger mt-4 mb-4" onclick="removeMessagesConfirmation();">Anuluj</button>
 		</div>
+	</div>
 
-		<div id="joinRequest" class="col-12">
-			<div id="joinRequestContent" class="col-xl-6 col-md-10 text-center">
-				<h2 id="joinRequestText"></h2>
-				<div id="buttonsContainer" class="col-12 p-0 m-0 mt-3"></div>
-			</div>
+	<div id="joinRequest" class="col-12">
+		<div id="joinRequestContent" class="col-xl-6 col-md-10 text-center">
+			<h2 id="joinRequestText"></h2>
+			<div id="buttonsContainer" class="col-12 p-0 m-0 mt-3"></div>
 		</div>
 	</div>
 	<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>

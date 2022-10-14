@@ -1,0 +1,7 @@
+-Zmiana wyświetlania obrazka
+ +teraz obrazek zawsze wyświetlany jest w całości, a w przypadku gdy obrazek nie mieści się na stronie, nawigujemy po nim za pomocą dwóch suwaków
+-Zmiana w wyświetlaniu użytkowników
+ +teraz w miejscu, gdzie wyświetlani byli użytkownicy, którzy dołączyli do pokoju, którego jesteśmy właścicielem, wyświetlani są użytkownicy(wraz z właścicielem), którzy również dołączyli do pokoju, w którym aktualnie jesteśmy
+-Dodano "gumkę" umożliwającą ścieranie wcześniej narysowanych rzeczy
+-Naprawiony błąd z rejestracją
+-Naprawiony błąd z niepoprawnym wyświetlaniem użytkowników online

@@ -115,7 +115,6 @@ function showSignup()
 {
   $("#loginPage").hide();
   $("#signupPage").fadeIn(1000);
-  alertERROR("Błąd logowania");
 }
 
 function clearCookie() 
@@ -179,7 +178,6 @@ function getNewToken(functionToExecute, functionArgument)
   });
 }
 
-
 function login() 
 {
   $.ajax({
@@ -217,30 +215,25 @@ function createAccount()
   }
   else
   {
-    const packet = {username: $("#signupUsername").val(), password: $("#signupPassword").val()};
-    $.post("/signup", packet, function(data) 
-    {
-      if(data.exit_code === 0) 
+    $.ajax({
+      url: "/signup",
+      type: 'put',
+      data:{
+        username: $("#signupUsername").val(),
+        password: $("#signupPassword").val()
+      },
+      success: function(response)
       {
         alertOK("Utworzono konto");
         $("#signupUsername").val('');
         $("#signupPassword").val('');
-      }
-      else if(data.exit_code === 1) 
+      },
+      error: function(response) 
       {
-        alertERROR("Nie wszystkie pola są wypełnione"); 
-      }
-      else if(data.exit_code === 2) 
-      {
-        alertERROR("Podana nazwa jest już zajęta");
+        console.clear();
         $("#signupUsername").val('');
         $("#signupPassword").val('');
-      }
-      else 
-      {
-        alertERROR("Wystąpił problem z rejestracją.\nKod błędu: " + data.exit_code);
-        $("#signupUsername").val('');
-        $("#signupPassword").val('');
+        alertERROR(response.responseText);
       }
     });
   }

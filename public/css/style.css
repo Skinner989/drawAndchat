@@ -80,12 +80,31 @@ body
 	background-color: white;
 	height: calc(80vh);
 	min-height: 775px;
+	overflow-x: scroll;
+	overflow-y: clip !important;
 	max-width: 1873px;
 }
 
 #draw
 {
 	cursor: crosshair;
+}
+
+#drawingBoxContent::-webkit-scrollbar-track
+{
+	background-color: lightgrey;
+}
+
+#drawingBoxContent::-webkit-scrollbar
+{
+	width: 6px;
+}
+
+#drawingBoxContent::-webkit-scrollbar-thumb
+{
+	box-shadow: none;
+	-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,.3);
+	background-color: rgb(53, 53, 53);
 }
 
 #availableButtons
@@ -103,18 +122,6 @@ body
 	background-color: rgb(15, 83, 15);
 	text-align: center;
 	min-height: 51px;
-}
-
-#onlineUsers, #roomUsers
-{
-	background-color: rgb(15, 83, 15);
-	text-align: center;
-}
-
-#onlineUsers .user:hover
-{
-	background-image: linear-gradient(rgb(60, 255, 0), rgb(8, 143, 42));
-	cursor: pointer;
 }
 
 .roomUsername, .user
@@ -240,9 +247,6 @@ body
 
 .alertContent
 {
-	/* text-overflow: ellipsis;
-	overflow: hidden;
-	white-space: nowrap; */
 	overflow-wrap: break-word;
 	white-space: normal;
 }
@@ -320,17 +324,45 @@ body
 	}
 }
 
-#chat
+.rubber
+{
+	padding: 2px 6px 2px 6px;
+}
+
+.rubber:hover
+{
+	background: rgb(190, 48, 48);
+	cursor: pointer;
+}
+
+.activeRubberButton
+{
+	background: rgb(255, 0, 0);
+}
+
+.activeRubberDrawingBox
+{
+	cursor: cell !important;
+}
+
+.btn-label 
 {
 	position: relative;
-	display: inline-block;
+	left: -12px;display: inline-block;
+	padding: 6px 12px;
+	background: rgba(0,0,0,0.15);
+	border-radius: 3px 0 0 3px;
+}
+
+.btn-labeled 
+{
+	padding-top: 0;
+	padding-bottom: 0;
 }
 
 #chat #chatImg
 {
-	background-color: gray;
 	cursor: pointer;
-	border-radius: 15px;
 }
 
 #chat #chatImg:hover 
@@ -338,7 +370,7 @@ body
 	background-color: #4CAF50;
 }
   
-#chatContent 
+#chatContent
 {
 	display: none;
 	position: absolute;

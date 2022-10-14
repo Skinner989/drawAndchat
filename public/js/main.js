@@ -14,7 +14,6 @@ class Variables
    }
 }
 
-// Refresh
 window.sessionStorage.removeItem("otherRoom");
 
 let amountOfAlerts = 0;
@@ -120,37 +119,14 @@ let color = document.getElementById("drawingColor").value;
 let size = document.getElementById("drawingSize").value;
 let pos = { x: 0, y: 0 };
 let roomUsers = [];
-if(sessionStorage.getItem("roomUsers") !== null) 
+if(sessionStorage.getItem("myRoomUsers") !== null) 
 {
-  roomUsers = JSON.parse(sessionStorage.getItem("roomUsers"));
+  roomUsers = JSON.parse(sessionStorage.getItem("myRoomUsers"));
 }
 
-let myTimeout;
 function resize() 
 {
-  ctx.canvas.width = document.getElementById("drawingBoxContent").offsetWidth;
-  ctx.canvas.height = document.getElementById("drawingBoxContent").offsetHeight;
   pos = { x: 0, y: 0 };
-  // Refresh
-  // if((myData.isMine) && (sessionStorage.getItem("otherName") === null))
-  //==================================================================================
-  // if(myData.isMine)
-  // {
-  //   getData(false);
-  // }
-  // else if((!myData.isMine) && (sessionStorage.getItem("otherName") !== null))
-  // {
-  //   getOtherData(myData.otherName, false);
-  // }
-  myTimeout = setTimeout(() =>
-  {
-    getUserData(false);
-    while(myTimeout)
-    {
-      window.clearTimeout(myTimeout);
-      myTimeout--
-    }
-  }, 500);
 }
 
 window.addEventListener("resize", resize);
@@ -158,18 +134,19 @@ window.addEventListener("unload", () =>
 {
   if(window.sessionStorage.getItem("otherRoom") === null)
   {
-    let blob = new Blob([JSON.stringify({username: window.sessionStorage.getItem("myName"), room: "none"})], {type : 'application/json; charset=UTF-8'});
+    let blob = new Blob([JSON.stringify({username: window.sessionStorage.getItem("myName"), room: myRoom, test: 1})], {type : 'application/json; charset=UTF-8'});
     navigator.sendBeacon("/logout", blob);
   }
   else
   {
-    let blob = new Blob([JSON.stringify({username: window.sessionStorage.getItem("myName"), room: window.sessionStorage.getItem("otherRoom")})], {type : 'application/json; charset=UTF-8'});
+    let blob = new Blob([JSON.stringify({username: window.sessionStorage.getItem("myName"), room: window.sessionStorage.getItem("otherRoom"), test: 2})], {type : 'application/json; charset=UTF-8'});
     navigator.sendBeacon("/logout", blob);
   }
 });
 document.getElementById("joinToUser").addEventListener("click", () =>
 {
   let userToJoin = $("#username").val();
+  $("#username").val('');
   socket.emit('checkIfOnline', myName, userToJoin);
 });
 document.getElementById("drawingBoxContent").addEventListener("mousemove", draw);
@@ -181,17 +158,17 @@ function setPosition(e)
 {
   if($(document).width() >= 1033)
   {
-    pos.x = e.clientX - 15;
+    pos.x = (e.clientX - 15) + document.getElementById("drawingBoxContent").scrollLeft - parseInt(window.getComputedStyle(document.getElementById("drawingBoxContent")).marginLeft, 10);
     pos.y = (e.clientY - 100) + document.documentElement.scrollTop;
   }
   else if($(document).width() < 1033 && $(document).width() >= 756)
   {
-    pos.x = e.clientX - 15;
+    pos.x = (e.clientX - 15) + document.getElementById("drawingBoxContent").scrollLeft - parseInt(window.getComputedStyle(document.getElementById("drawingBoxContent")).marginLeft, 10);
     pos.y = (e.clientY - 140) + document.documentElement.scrollTop;
   }
   else if($(document).width() < 756)
   {
-    pos.x = e.clientX - 15;
+    pos.x = (e.clientX - 15) + document.getElementById("drawingBoxContent").scrollLeft - parseInt(window.getComputedStyle(document.getElementById("drawingBoxContent")).marginLeft, 10);
     pos.y = (e.clientY - 179) + document.documentElement.scrollTop;
   }
 }
@@ -280,7 +257,64 @@ socket.on('draw', function(responseData)
 socket.on('connect', () => 
 {
   window.sessionStorage.setItem("socketId", socket.id);
-  socket.emit('create', myRoom);
+});
+
+socket.on('getRoomUser', function(room) 
+{
+  roomUserResponse(room)
+});
+
+function roomUserResponse(room)
+{
+  $.ajax({
+    url: "/getRoomUserResponse",
+    type: 'post',
+    data:{
+      room: room,
+      socketId: window.sessionStorage.getItem("socketId")
+    },
+    error: function(response)
+    {
+      if(response.status == 401)
+      {
+        getNewToken(roomUserResponse, room);
+      }
+      else
+      {
+        leave(true);    
+      }
+    }
+  });
+}
+
+socket.on('getRoomUserResponse', function(room, socket, name) 
+{
+  $.ajax({
+    url: "/checkIfRoomMember",
+    type: 'get',
+    data:{
+      room: room,
+      socketId: socket
+    },
+    success: function()
+    {
+      if(!roomUsers.includes(name) && name !== myName && myData.isMine)
+      {
+        if(roomUsers.length === 0) $("#roomUsers").html("");
+        roomUsers.push(name);
+        sessionStorage.setItem("myRoomUsers", JSON.stringify(roomUsers))
+        $("#roomUsers").append('<div id="U' + name + '" class="row roomUser m-0 p-0 col-lg-2 col-md-4 col-sm-4"><div class="roomUsername m-0 p-0 pt-2 pb-2 col-10">' + 
+        name + '</div><div class="removeButtonContainer m-0 p-0 col-2" id="removeButton_' + name + '" onclick="removeUser(this.id);"><i class="center fa-solid fa-x"></i></div></div>');
+      }
+      else if(!roomUsers.includes(name) && name !== myName && !myData.isMine)
+      {
+        if(roomUsers.length === 0) $("#roomUsers").html("");
+        roomUsers.push(name);
+        $("#roomUsers").append('<div id="U' + name + '" class="row roomUser m-0 p-0 col-lg-2 col-md-4 col-sm-4"><div class="roomUsername m-0 p-0 pt-2 pb-2 col-12">' + 
+        name + '</div></div>');
+      }
+    },
+  });
 });
 
 socket.on('createRoomResponse', function(room) 
@@ -304,7 +338,6 @@ function checkRoom(room)
       }
       else
       {
-        alertERROR("Sesja wygasła. Zaloguj się ponownie");
         window.sessionStorage.setItem("sessionExpired", true);
         logout();      
       }
@@ -350,14 +383,15 @@ socket.on('checkIfOnlineResponse', function (name, roomOwnerName, decision)
   }
 });
 
-socket.on('getOnlineUsersResponse', function(name, onlineUsers)
+socket.on('getOnlineUsersResponse', function(onlineUsers)
 {
+  console.log(onlineUsers);
   updateOnlineUsers(onlineUsers);
 });
 
 socket.on('addOnlineUser', function(user)
 {
-  if(myName != user)  addOnlineUser(user);
+  if(myName != user) addOnlineUser(user);
 });
 
 socket.on('removeOnlineUser', function(user, onlineUsers)
@@ -397,6 +431,7 @@ function acceptJoinRequest(name)
     data:{
       room: myRoom,
       username: name,
+      roomUsers: "none",
       decision: true
     },
     dataType: 'json',
@@ -426,6 +461,7 @@ function rejectJoinRequest(name)
     data:{
       room: myRoom,
       username: name,
+      roomUsers: false,
       decision: false
     },
     dataType: 'json',
@@ -433,7 +469,7 @@ function rejectJoinRequest(name)
     {
       if(response.status == 401)
       {
-        getNewToken(acceptJoinRequest, name);
+        getNewToken(rejectJoinRequest, name);
       }
       else
       {
@@ -443,7 +479,7 @@ function rejectJoinRequest(name)
   });
 }
 
-socket.on('joinRequestResponse', function(roomOwnerName, name, decision) 
+socket.on('joinRequestResponse', function(roomOwnerName, name, roomOwnerUsers, decision) 
 {
   if(name == myName) 
   {
@@ -452,6 +488,8 @@ socket.on('joinRequestResponse', function(roomOwnerName, name, decision)
       myData.otherRoom = 'room_' + myData.otherId;
       myData.isMine = false;
       socket.emit('join', myData.otherRoom, myName);
+      roomUsers = roomOwnerUsers;
+      getRoomUsers();
       getUserData(true);
       alertOK("Użytkownik <b>" + roomOwnerName + "</b> zaakceptował prośbę dołączenia");
     }
@@ -467,32 +505,57 @@ socket.on('joinedToRoom', function(room, name)
 {
   if(room === myRoom) 
   {
-    if((!roomUsers.includes(name)) && (name != null))
+    if(myData.isMine)
     {
-			roomUsers.push(name);
-      sessionStorage.setItem("roomUsers", JSON.stringify(roomUsers));
-      if(myData.noRoomUsers === true)
+      if((!roomUsers.includes(name)) && (name != null))
       {
-        $("#roomUsers").html("");
-        myData.noRoomUsers = false;
+        roomUsers.push(name);
+        sessionStorage.setItem("myRoomUsers", JSON.stringify(roomUsers));
+        if(myData.noRoomUsers === true)
+        {
+          $("#roomUsers").html("");
+          myData.noRoomUsers = false;
+        }
+        let newUser = document.createElement('div');
+        newUser.setAttribute('id', 'U' + name);
+        newUser.classList.add('row', 'roomUser', 'newUser', 'm-0', 'p-0', 'col-lg-2', 'col-md-4', 'col-sm-4');
+        let newUsername = document.createElement('div');
+        newUsername.innerHTML = name;
+        newUsername.classList.add('roomUsername', 'm-0', 'p-0', 'pb-2', 'pt-2', 'col-10');
+        let newUserRemoveButtonContainer = document.createElement('div');
+        newUserRemoveButtonContainer.setAttribute('id', 'removeButton_' + name);
+        newUserRemoveButtonContainer.setAttribute('onclick', 'removeUser(this.id);');
+        newUserRemoveButtonContainer.classList.add('removeButtonContainer', 'm-0', 'p-0', 'col-2');
+        let newUserRemoveButton = document.createElement('i');
+        newUserRemoveButton.classList.add('center', 'fa-solid', 'fa-x');
+        document.querySelector("#roomUsers").appendChild(newUser);
+        newUser.appendChild(newUsername);
+        newUser.appendChild(newUserRemoveButtonContainer);
+        newUserRemoveButtonContainer.appendChild(newUserRemoveButton);
       }
-      let newUser = document.createElement('div');
-      newUser.setAttribute('id', 'U' + name);
-      newUser.classList.add('row', 'roomUser', 'newUser', 'm-0', 'p-0', 'col-lg-2', 'col-md-4', 'col-sm-4');
-      let newUsername = document.createElement('div');
-      newUsername.innerHTML = name;
-      newUsername.classList.add('roomUsername', 'm-0', 'p-0', 'pt-2', 'col-10');
-      let newUserRemoveButtonContainer = document.createElement('div');
-      newUserRemoveButtonContainer.classList.add('removeButtonContainer', 'm-0', 'p-0', 'col-2');
-      let newUserRemoveButton = document.createElement('i');
-      newUserRemoveButton.setAttribute('id', 'removeButton_' + name);
-      newUserRemoveButton.setAttribute('onclick', 'removeUser(this.id);');
-      newUserRemoveButton.classList.add('center', 'fa-solid', 'fa-x');
-      document.querySelector("#roomUsers").appendChild(newUser);
-      newUser.appendChild(newUsername);
-      newUser.appendChild(newUserRemoveButtonContainer);
-      newUserRemoveButtonContainer.appendChild(newUserRemoveButton);
-		}
+    }
+    else
+    {
+      let tempRoomUsers = [];
+      if(sessionStorage.getItem("myRoomUsers") !== null) 
+      {
+        tempRoomUsers = JSON.parse(sessionStorage.getItem("myRoomUsers"));
+      }
+      tempRoomUsers.push(name);
+      sessionStorage.setItem("myRoomUsers", JSON.stringify(tempRoomUsers));
+    }
+  }
+  else
+  {
+    roomUsers.push(name);
+    let newUser = document.createElement('div');
+    newUser.setAttribute('id', 'U' + name);
+    newUser.classList.add('row', 'roomUser', 'newUser', 'm-0', 'p-0', 'col-lg-2', 'col-md-4', 'col-sm-4');
+    let newUsername = document.createElement('div');
+    newUsername.innerHTML = name;
+    newUsername.classList.add('roomUsername', 'm-0', 'p-0', 'pb-2', 'pt-2', 'col-10');
+    document.querySelector("#roomUsers").appendChild(newUser);
+    newUser.appendChild(newUsername);
   }
 });
 
@@ -500,11 +563,49 @@ socket.on('userLeft', function(room, name)
 {
   if(room === myRoom) 
   {
-    let index = roomUsers.indexOf(name);
-    if (index > -1) 
+    if(myData.isMine)
     {
+      if(roomUsers.includes(name)) 
+      {
+        let index = roomUsers.indexOf(name);
+        roomUsers.splice(index, 1);
+        sessionStorage.setItem("myRoomUsers", JSON.stringify(roomUsers));
+      }
+      let removedUser = document.querySelector("#U" + name);
+      removedUser.classList.add('roomUserDelete');
+      removedUser.addEventListener('transitionend', function() 
+      {
+        this.remove();
+      });
+      if(roomUsers.length == 0)
+      {
+        setTimeout(() =>
+        {
+          let noUsers = document.createElement('div');
+          noUsers.innerHTML = 'Brak';
+          noUsers.classList.add('noUsers', 'm-0', 'p-0', 'pt-2', 'pb-2', 'ml-auto', 'mr-auto', 'col-2');
+          document.querySelector("#roomUsers").appendChild(noUsers);
+          myData.noRoomUsers = true;
+        }, 500);
+      }
+    }
+    else
+    {
+      if(roomUsers.includes(name)) 
+      {
+        let index = roomUsers.indexOf(name);
+        roomUsers.splice(index, 1);
+        sessionStorage.setItem("myRoomUsers", JSON.stringify(roomUsers));
+      }
+    }
+  }
+  else
+  {
+    if(roomUsers.includes(name)) 
+    {
+      let index = roomUsers.indexOf(name);
       roomUsers.splice(index, 1);
-      sessionStorage.setItem("roomUsers", JSON.stringify(roomUsers));
+      sessionStorage.setItem("myRoomUsers", JSON.stringify(roomUsers));
     }
     let removedUser = document.querySelector("#U" + name);
     removedUser.classList.add('roomUserDelete');
@@ -545,6 +646,22 @@ socket.on('removeFromRoom', function(name, room)
   }
 });
 
+function rubberControl()
+{
+  if($("#rubber").hasClass("activeRubberButton"))
+  {
+    color = document.getElementById("drawingColor").value;
+    $("#rubber").removeClass("activeRubberButton");
+    $("#drawingBoxContent").removeClass("activeRubberDrawingBox");
+  }
+  else
+  {
+    color = '#ffffff';
+    $("#rubber").addClass("activeRubberButton");
+    $("#drawingBoxContent").addClass("activeRubberDrawingBox");
+  }
+}
+
 function getRoomUsers() 
 {
   $("#roomUsers").html("");
@@ -554,8 +671,16 @@ function getRoomUsers()
   }
   for(const item of roomUsers) 
   {
-    $("#roomUsers").append('<div id="U' + item + '" class="row roomUser m-0 p-0 col-lg-2 col-md-4 col-sm-4"><div class="roomUsername m-0 p-0 pt-2 col-10">'
-    + item + '</div><div class="removeButtonContainer m-0 p-0 col-2" id="removeButton_' + item + '" onclick="removeUser(this.id);"><i class="center fa-solid fa-x"></i></div></div>');
+    if(myData.isMine)
+    {
+      $("#roomUsers").append('<div id="U' + item + '" class="row roomUser m-0 p-0 col-lg-2 col-md-4 col-sm-4"><div class="roomUsername m-0 p-0 pt-2 pb-2 col-10">' + 
+      item + '</div><div class="removeButtonContainer m-0 p-0 col-2" id="removeButton_' + item + '" onclick="removeUser(this.id);"><i class="center fa-solid fa-x"></i></div></div>');
+    }
+    else
+    {
+      $("#roomUsers").append('<div id="U' + item + '" class="row roomUser m-0 p-0 col-lg-2 col-md-4 col-sm-4"><div class="roomUsername m-0 p-0 pt-2 pb-2 col-12">' + 
+      item + '</div></div>');
+    }
   } 
 }
 
@@ -575,7 +700,7 @@ function removeUser(user)
       if(index > -1) 
       {
         roomUsers.splice(index, 1);
-        sessionStorage.setItem("roomUsers", JSON.stringify(roomUsers));//
+        sessionStorage.setItem("myRoomUsers", JSON.stringify(roomUsers));
       }
     },
     error: function(response)
@@ -586,7 +711,7 @@ function removeUser(user)
       }
       else
       {
-        alertERROR("Wystąpił błąd podczas próby załadowania profilu użytkownika.\nKod błędu: " + response.status);
+        alertERROR("Wystąpił błąd podczas próby usunięcia użytkownika z pokoju.\nKod błędu: " + response.status);
       }
     }
   });
@@ -1046,7 +1171,7 @@ function sendJoinRequest(name)
     {
       if(response.status == 401)
       {
-        getNewToken(checkIfBlocked, name);
+        getNewToken(sendJoinRequest, name);
       }
       else
       {
@@ -1118,14 +1243,25 @@ function getUserData(loadMsgsRequest)
   });
 }
 
-function leave(loadRequest) //
+function leave(loadRequest) 
 {
   window.sessionStorage.removeItem("otherName");
   window.sessionStorage.removeItem("otherRoom");
+  window.sessionStorage.removeItem("myRoomUsers");
   socket.emit('leave', myData.otherRoom, window.sessionStorage.getItem("myName"));
   if(loadRequest) 
   {
+    if(sessionStorage.getItem("myRoomUsers") !== null) 
+    {
+      roomUsers = JSON.parse(sessionStorage.getItem("myRoomUsers"));
+    }
+    else
+    {
+      roomUsers = [];
+    }
     myData.isMine = true;
+    if(JSON.parse(sessionStorage.getItem("myRoomUsers")) != undefined) roomUsers = JSON.parse(sessionStorage.getItem("myRoomUsers"));
+    getRoomUsers();
     $("#leaveBtn").hide();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     getUserData(true);
@@ -1217,12 +1353,26 @@ $(document).ready(function()
 	setTimeout(async function()
   {
     await addMeToOnlineUsers();
-    socket.emit('getOnlineUsers', myName);
+    socket.emit('createRoom', myRoom);
+    socket.emit('getOnlineUsers');
     loadBlockedUsers();
     loadMsgs();
-    resize();
     $('#pageContent')[0].style.display = "none";
     $('#pageContent').fadeIn(1000);
+    resize();
+    getUserData(false);
+    if(document.getElementById("drawingBoxContent").offsetHeight > 775)
+    {  
+      ctx.canvas.height = document.getElementById("drawingBoxContent").offsetHeight;
+    }
+  
+    if(document.getElementById("drawingBoxContent").offsetWidth < 1873)
+    {
+      const outerContent = $('#drawingBoxContent');
+      const innerContent = $('#draw');
+      
+      outerContent.scrollLeft( (innerContent.width() - outerContent.width()) / 2);
+    }
 		$('body').addClass('loaded');
 	}, 1000);
 });
