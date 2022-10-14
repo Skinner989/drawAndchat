@@ -134,12 +134,12 @@ window.addEventListener("unload", () =>
 {
   if(window.sessionStorage.getItem("otherRoom") === null)
   {
-    let blob = new Blob([JSON.stringify({username: window.sessionStorage.getItem("myName"), room: myRoom, test: 1})], {type : 'application/json; charset=UTF-8'});
+    let blob = new Blob([JSON.stringify({username: window.sessionStorage.getItem("myName"), room: myRoom})], {type : 'application/json; charset=UTF-8'});
     navigator.sendBeacon("/logout", blob);
   }
   else
   {
-    let blob = new Blob([JSON.stringify({username: window.sessionStorage.getItem("myName"), room: window.sessionStorage.getItem("otherRoom"), test: 2})], {type : 'application/json; charset=UTF-8'});
+    let blob = new Blob([JSON.stringify({username: window.sessionStorage.getItem("myName"), room: window.sessionStorage.getItem("otherRoom")})], {type : 'application/json; charset=UTF-8'});
     navigator.sendBeacon("/logout", blob);
   }
 });
