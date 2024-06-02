@@ -20,10 +20,10 @@ app.use(cookieparser());
 // Database config
 //===================================================
 const config_mysql = {
-	"host"     : "localhost",
-	"user"     : "root",
-	"password" : "mysql",
-	"database" : "drawAndChat"
+	"host"     : "sql7.freesqldatabase.com",
+	"user"     : "sql7711286",
+	"password" : "UBXZtfb9Zy",
+	"database" : "sql7711286"
 }
 
 const Database = require('./SQL');
