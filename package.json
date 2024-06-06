@@ -7,8 +7,8 @@
     "express": "^4.19.2",
     "express-session": "^1.18.0",
     "http-server": "^14.1.1",
-    "socket.io": "^4.7.5",
-    "socket.io-client": "^4.7.5",
+    "socket.io": "^4.0.1",
+    "socket.io-client": "^4.0.1",
     "bcrypt": "^5.1.1",
     "jsonwebtoken": "^9.0.2",
     "cookie-parser": "^1.4.6",
@@ -19,8 +19,7 @@
     "@flydotio/dockerfile": "^0.5.7"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "PORT=80 node server.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC"

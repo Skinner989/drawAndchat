@@ -113,11 +113,12 @@ const myName = window.sessionStorage.getItem("myName");
 const canvas = document.getElementById("draw");
 const ctx = canvas.getContext("2d");
 const id = window.sessionStorage.getItem("id");
-const socket = io.connect('http://localhost:3000');
+const socket = io.connect('https://distinctive-stacee-drawandchat-0ae07211.koyeb.app/');
 const myRoom = 'room_' + id;
 let color = document.getElementById("drawingColor").value;
 let size = document.getElementById("drawingSize").value;
 let pos = { x: 0, y: 0 };
+let buttonDown = false;
 let roomUsers = [];
 if(sessionStorage.getItem("myRoomUsers") !== null) 
 {
@@ -154,28 +155,44 @@ document.getElementById("drawingBoxContent").addEventListener("mousedown", setPo
 document.getElementById("drawingBoxContent").addEventListener("mouseenter", setPosition);
 document.getElementById("drawingBoxContent").addEventListener("mouseup", sendData);
 
+document.addEventListener('touchstart', setPosition);
+document.addEventListener('touchmove', draw);
+document.addEventListener('touchend', sendData);
+
 function setPosition(e) 
 {
-  if($(document).width() >= 1033)
+  if (e.type == "touchstart" || e.type == "mousedown") 
   {
-    pos.x = (e.clientX - 15) + document.getElementById("drawingBoxContent").scrollLeft - parseInt(window.getComputedStyle(document.getElementById("drawingBoxContent")).marginLeft, 10);
-    pos.y = (e.clientY - 100) + document.documentElement.scrollTop;
+    buttonDown = true;
   }
-  else if($(document).width() < 1033 && $(document).width() >= 756)
+  if (e.type == "touchstart" || e.type == "touchmove") 
   {
-    pos.x = (e.clientX - 15) + document.getElementById("drawingBoxContent").scrollLeft - parseInt(window.getComputedStyle(document.getElementById("drawingBoxContent")).marginLeft, 10);
-    pos.y = (e.clientY - 140) + document.documentElement.scrollTop;
-  }
-  else if($(document).width() < 756)
+    pos.x = e.touches[0].clientX;
+    pos.y = e.touches[0].clientY;
+  } 
+  else 
   {
-    pos.x = (e.clientX - 15) + document.getElementById("drawingBoxContent").scrollLeft - parseInt(window.getComputedStyle(document.getElementById("drawingBoxContent")).marginLeft, 10);
-    pos.y = (e.clientY - 179) + document.documentElement.scrollTop;
+    if($(document).width() >= 1033)
+    {
+      pos.x = (e.clientX - 15) + document.getElementById("drawingBoxContent").scrollLeft - parseInt(window.getComputedStyle(document.getElementById("drawingBoxContent")).marginLeft, 10);
+      pos.y = (e.clientY - 100) + document.documentElement.scrollTop;
+    }
+    else if($(document).width() < 1033 && $(document).width() >= 756)
+    {
+      pos.x = (e.clientX - 15) + document.getElementById("drawingBoxContent").scrollLeft - parseInt(window.getComputedStyle(document.getElementById("drawingBoxContent")).marginLeft, 10);
+      pos.y = (e.clientY - 140) + document.documentElement.scrollTop;
+    }
+    else if($(document).width() < 756)
+    {
+      pos.x = (e.clientX - 15) + document.getElementById("drawingBoxContent").scrollLeft - parseInt(window.getComputedStyle(document.getElementById("drawingBoxContent")).marginLeft, 10);
+      pos.y = (e.clientY - 179) + document.documentElement.scrollTop;
+    }
   }
 }
 
 function draw(e) 
 {
-  if (e.buttons !== 1) return;
+  if (!buttonDown) return;
 
   ctx.beginPath();
 
@@ -207,6 +224,7 @@ let dataToSend = [];
 
 function sendDrawing() 
 {
+  buttonDown = false;
   let room;
   if(myData.isMine) room = myRoom;
   else  room = myData.otherRoom;
@@ -385,7 +403,6 @@ socket.on('checkIfOnlineResponse', function (name, roomOwnerName, decision)
 
 socket.on('getOnlineUsersResponse', function(onlineUsers)
 {
-  console.log(onlineUsers);
   updateOnlineUsers(onlineUsers);
 });
 
