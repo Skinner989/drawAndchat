@@ -21,18 +21,14 @@
 	<div id="pageContent" class="p-0 m-0">
 		<div class="pl-3 pr-3">
 		<div class="managementRow row col-12 mt-2 p-0 mr-0 ml-0">
-			<div class="colorRow row m-0 p-0 mr-2">
-				<label for="drawingColor" class="mr-2">Kolor:</label>
-				<input class="mt-1" name="drawingColor" id="drawingColor" type="color" value="#ff0000" onchange="colorChange();">
-			</div>
-			<div class="logoutRow row justify-content-end text-right m-0 p-0 ml-auto">
-				<div id="loggedUser" class="mr-3">Zalogowany jako: </div>
-				<button id="logout" class="btn btn-danger" onclick="preLogout();">Wyloguj</button>
-			</div>
-			<div class="sizeRow row m-0 p-0">
-				<label for="drawingSize" class="mr-2">Rozmiar:</label>
-				<input name="drawingSize" id="drawingSize" value="10" class="form-control col-2 mr-2 mb-2" onchange="sizeChange();">
-				<div id="rubber" class="rubber mt-1 mr-1 mb-2 ml-0" onclick="rubberControl();"><i class="fa-solid fa-eraser"></i></div>
+			<div class="sizeRow row m-0">
+				<label for="drawingColor" class="ml-1 mr-2 mt-auto mb-auto">Kolor:</label>
+				<input class="mt-auto mb-auto" name="drawingColor" id="drawingColor" type="color" value="#ff0000" onchange="colorChange();">
+				<label for="drawingSize" class="ml-1 mr-2 mt-auto mb-auto">Rozmiar:</label>
+				<input name="drawingSize" id="drawingSize" value="10" class="form-control col-2 mr-2 mt-auto mb-auto" onchange="sizeChange();">
+				<div id="movement" class="pencil mr-1 mt-auto mb-auto" onclick="movementControl();"><i class="fa-solid fa-arrows-up-down-left-right"></i></div>
+				<div id="pencil" class="pencil activePencilButton mr-1 mt-auto mb-auto" onclick="pencilControl();"><i class="fa-solid fa-pencil"></i></div>
+				<div id="rubber" class="rubber mr-1 mt-auto mb-auto" onclick="rubberControl();"><i class="fa-solid fa-eraser"></i></div>
 				<div id="chat">
 					<div id="chatImg" class="ml-auto mr-0 p-1" onclick="openChat();"><i class="fa-solid fa-message"></i></div>
 					<div class="text-center" id="chatContent">
@@ -43,6 +39,10 @@
 						<button type="button" class="btn btn-success ml-auto mr-auto mb-1" onclick="sendMsg();" style="height:30%;">Wyślij</button>
 					</div>
 				</div>
+			</div>
+			<div class="logoutRow row justify-content-end text-right m-0 p-0 ml-auto">
+				<div id="loggedUser" class="mr-3">Zalogowany jako: </div>
+				<button id="logout" class="btn btn-danger" onclick="preLogout();">Wyloguj</button>
 			</div>
 		</div>
 		<div id="availableButtons" class="col-12 p-0">

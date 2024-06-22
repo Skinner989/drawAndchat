@@ -21,9 +21,9 @@ app.use(cookieparser());
 //===================================================
 const config_mysql = {
 	"host"     : "sql7.freesqldatabase.com",
-	"user"     : "sql7711286",
-	"password" : "UBXZtfb9Zy",
-	"database" : "sql7711286"
+	"user"     : "sql7714708",
+	"password" : "xTEaunWkyv",
+	"database" : "sql7714708"
 }
 
 const Database = require('./SQL');

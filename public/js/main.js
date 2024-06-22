@@ -155,9 +155,9 @@ document.getElementById("drawingBoxContent").addEventListener("mousedown", setPo
 document.getElementById("drawingBoxContent").addEventListener("mouseenter", setPosition);
 document.getElementById("drawingBoxContent").addEventListener("mouseup", sendData);
 
-document.addEventListener('touchstart', setPosition);
-document.addEventListener('touchmove', draw);
-document.addEventListener('touchend', sendData);
+document.getElementById("drawingBoxContent").addEventListener('touchstart', setPosition);
+document.getElementById("drawingBoxContent").addEventListener('touchmove', draw);
+document.getElementById("drawingBoxContent").addEventListener('touchend', sendData);
 
 function setPosition(e) 
 {
@@ -167,57 +167,72 @@ function setPosition(e)
   }
   if (e.type == "touchstart" || e.type == "touchmove") 
   {
-    pos.x = e.touches[0].clientX;
-    pos.y = e.touches[0].clientY;
+    if($(document).width() >= 1033)
+    {
+      pos.x = (e.touches[0].clientX - 15) + document.getElementById("drawingBoxContent").scrollLeft - parseInt(window.getComputedStyle(document.getElementById("drawingBoxContent")).marginLeft, 10);
+      pos.y = (e.touches[0].clientY - 110) + document.documentElement.scrollTop;
+    }
+    else if($(document).width() < 941 && $(document).width() >= 491)
+    {
+      pos.x = (e.touches[0].clientX - 15) + document.getElementById("drawingBoxContent").scrollLeft - parseInt(window.getComputedStyle(document.getElementById("drawingBoxContent")).marginLeft, 10);
+      pos.y = (e.touches[0].clientY - 170) + document.documentElement.scrollTop;
+    }
+    else if($(document).width() < 491)
+    {
+      pos.x = (e.touches[0].clientX - 15) + document.getElementById("drawingBoxContent").scrollLeft - parseInt(window.getComputedStyle(document.getElementById("drawingBoxContent")).marginLeft, 10);
+      pos.y = (e.touches[0].clientY - 205) + document.documentElement.scrollTop;
+    }
   } 
   else 
   {
     if($(document).width() >= 1033)
     {
       pos.x = (e.clientX - 15) + document.getElementById("drawingBoxContent").scrollLeft - parseInt(window.getComputedStyle(document.getElementById("drawingBoxContent")).marginLeft, 10);
-      pos.y = (e.clientY - 100) + document.documentElement.scrollTop;
+      pos.y = (e.clientY - 112) + document.documentElement.scrollTop;
     }
-    else if($(document).width() < 1033 && $(document).width() >= 756)
+    else if($(document).width() < 941 && $(document).width() >= 491)
     {
       pos.x = (e.clientX - 15) + document.getElementById("drawingBoxContent").scrollLeft - parseInt(window.getComputedStyle(document.getElementById("drawingBoxContent")).marginLeft, 10);
-      pos.y = (e.clientY - 140) + document.documentElement.scrollTop;
+      pos.y = (e.clientY - 170) + document.documentElement.scrollTop;
     }
-    else if($(document).width() < 756)
+    else if($(document).width() < 491)
     {
       pos.x = (e.clientX - 15) + document.getElementById("drawingBoxContent").scrollLeft - parseInt(window.getComputedStyle(document.getElementById("drawingBoxContent")).marginLeft, 10);
-      pos.y = (e.clientY - 179) + document.documentElement.scrollTop;
+      pos.y = (e.clientY - 205) + document.documentElement.scrollTop;
     }
   }
 }
 
 function draw(e) 
 {
-  if (!buttonDown) return;
+  if(movement == false)
+  {
+    if (!buttonDown) return;
+    ctx.beginPath();
 
-  ctx.beginPath();
+    ctx.lineWidth = size;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = color;
 
-  ctx.lineWidth = size;
-  ctx.lineCap = "round";
-  ctx.strokeStyle = color;
+    ctx.moveTo(pos.x, pos.y);
+    let xsPos = pos.x;
+    let ysPos = pos.y;
+    setPosition(e);
+    ctx.lineTo(pos.x, pos.y);
 
-  ctx.moveTo(pos.x, pos.y);
-  let xsPos = pos.x;
-  let ysPos = pos.y;
-  setPosition(e);
-  ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
 
-  ctx.stroke();
-
-  let data = {
-    x: pos.x,
-    y: pos.y,
-    sx: xsPos,
-    sy: ysPos,
-    color: color,
-    size: size,
-    name: myName
-  };
-  dataToSend.push(data);
+    let data = {
+      x: pos.x,
+      y: pos.y,
+      sx: xsPos,
+      sy: ysPos,
+      color: color,
+      size: size,
+      name: myName
+    };
+    dataToSend.push(data);
+  }
 }
 
 let dataToSend = [];
@@ -663,20 +678,46 @@ socket.on('removeFromRoom', function(name, room)
   }
 });
 
+let movement = false;
+let pencil = true;
+let rubber = false;
+document.getElementById("movement").addEventListener("touchstart", movementControl)
+document.getElementById("pencil").addEventListener("touchstart", pencilControl)
+
+function movementControl()
+{
+  if($("#rubber").hasClass("activeRubberButton")) {$("#rubber").removeClass("activeRubberButton");}
+  if($("#pencil").hasClass("activePencilButton")) {$("#pencil").removeClass("activePencilButton");}
+  $("#movement").addClass("activePencilButton");
+  canvas.setAttribute("style","touch-action: auto;");
+  pencil = false;
+  rubber = false;
+  movement = true;
+  color = document.getElementById("drawingColor").value;
+}
+
+function pencilControl()
+{
+  if($("#rubber").hasClass("activeRubberButton")) {$("#rubber").removeClass("activeRubberButton");}
+  if($("#movement").hasClass("activePencilButton")) {$("#movement").removeClass("activePencilButton");}
+  canvas.setAttribute("style","touch-action: none;");
+  pencil = true;
+  rubber = false;
+  movement = false;
+  $("#pencil").addClass("activePencilButton");
+  color = document.getElementById("drawingColor").value;
+}
+
 function rubberControl()
 {
-  if($("#rubber").hasClass("activeRubberButton"))
-  {
-    color = document.getElementById("drawingColor").value;
-    $("#rubber").removeClass("activeRubberButton");
-    $("#drawingBoxContent").removeClass("activeRubberDrawingBox");
-  }
-  else
-  {
-    color = '#ffffff';
-    $("#rubber").addClass("activeRubberButton");
-    $("#drawingBoxContent").addClass("activeRubberDrawingBox");
-  }
+  if($("#pencil").hasClass("activePencilButton")) {$("#pencil").removeClass("activePencilButton");}
+  if($("#movement").hasClass("activePencilButton")) {$("#movement").removeClass("activePencilButton");}
+  canvas.setAttribute("style","touch-action: none;");
+  rubber = true;
+  movement = false;
+  color = '#ffffff';
+  $("#rubber").addClass("activeRubberButton");
+  $("#drawingBoxContent").addClass("activeRubberDrawingBox");
 }
 
 function getRoomUsers() 

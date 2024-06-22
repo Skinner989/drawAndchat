@@ -87,6 +87,7 @@ body
 
 #draw
 {
+	touch-action: none;
 	cursor: crosshair;
 }
 
@@ -107,8 +108,27 @@ body
 	background-color: rgb(53, 53, 53);
 }
 
+@media (max-width: 1033px) 
+{
+
+    #drawingBoxContent::-webkit-scrollbar
+	{ 
+		height: 20px;
+	}
+}
+
+@media (max-width: 756px) 
+{
+
+    #drawingBoxContent::-webkit-scrollbar
+	{ 
+		height: 25px;
+	}
+}
+
 #availableButtons
 {
+	margin-top: 20px;
 	height: 38px;
 }
 
@@ -269,29 +289,24 @@ body
 	}
 }
 
-@media (max-width: 772px) 
+@media (max-width: 940px) 
 {
     .managementRow
 	{ 
 		display: flex; 
 	}
-	
-	.colorRow
-	{
-		order: 2;
-		width: 100% !important;
-	}
 
     .sizeRow 
 	{ 
-		order: 3;
+		order: 1;
 	}
 	
 	.logoutRow
 	{ 
-		order: 1;
+		order: 2;
 		margin-left: 0 !important;
 		margin-right: auto !important;
+		margin-top: 60px !important;
 	}
 
 	#loggedUser
@@ -312,16 +327,28 @@ body
 
 .sizeRow 
 { 
-	max-width: 260px;
+	max-width: 450px;
+	z-index: 2;
+	position: fixed;
+    background-color: #333;
+    padding: 5px 0;
+	border-radius: 10px;
 }
 
-@media (max-width: 1049px) 
+.pencil
 {
+	padding: 2px 6px 2px 6px;
+}
 
-    .sizeRow 
-	{ 
-		max-width: 600px;
-	}
+.pencil:hover
+{
+	background-color: #4CAF50;
+	cursor: pointer;
+}
+
+.activePencilButton
+{
+	background: #4CAF50;
 }
 
 .rubber
@@ -387,11 +414,47 @@ body
 	}
 }
 
+@media (max-width: 864px)
+{
+	#chatContent
+	{
+		margin-left: -310px;
+	}
+}
+
+@media (max-width: 764px)
+{
+	#chatContent
+	{
+		margin-left: -400px;
+	}
+}
+
 @media (max-width: 650px)
 {
 	#chatContent
 	{
-		width: 100%;
+		width: 100% !important;
+	}
+}
+
+@media (max-width: 490px)
+{
+	#drawingColor
+	{
+		margin-right: 200px !important;
+	}
+	.sizeRow 
+	{ 
+		max-width: 350px;
+	}
+	.logoutRow
+	{ 
+		margin-top: 90px !important;
+	}
+	#chatContent
+	{
+		margin-left: -275px;
 	}
 }
 
